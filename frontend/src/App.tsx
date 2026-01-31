@@ -1,35 +1,68 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [messages, setMessages] = useState<string[]>([]);
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8080");
+    ws.onopen = () => {
+      console.log("Connected to server");
+      setSocket(ws);
+    };
+    ws.onmessage = (event) => {
+      console.log("Message from server:", event.data);
+      setMessages((prev) => [...prev, event.data]);
+    };
+    ws.onclose = () => {
+      console.log("Disconnected from server");
+      setSocket(null);
+    };
+    return () => ws.close();
+  }, []);
+
+  const joinGame = () => {
+    if (socket) {
+      socket.send(JSON.stringify({ type: "init_game" }));
+    }
+  };
+
+  const makeMove = () => {
+    if (socket) {
+      socket.send(JSON.stringify({
+        type: "move",
+        move: { from: "e2", to: "e4" }
+      }));
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+    <div className="flex flex-col items-center justify-center h-screen space-y-4">
+      <h1 className="text-3xl font-bold">Chess Game</h1>
+      <div className="space-x-4">
+        <button 
+          onClick={joinGame}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Join Game
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+        <button 
+          onClick={makeMove}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Make Move (e2 to e4)
+        </button>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      <div className="w-full max-w-md p-4 bg-gray-100 rounded overflow-auto h-64">
+        <h2 className="font-semibold mb-2">Logs:</h2>
+        {messages.map((msg, i) => (
+          <div key={i} className="text-sm border-b py-1">{msg}</div>
+        ))}
+      </div>
+    </div>
   )
 }
 
 export default App
+

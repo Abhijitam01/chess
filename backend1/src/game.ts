@@ -13,57 +13,65 @@ export class Game {
         this.player2 = player2;
         this.board = new Chess();
         this.startTime = Date.now();
-        this.player1.emit(JSON.stringify({
+        this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
                 color: "white",
             }
         }))
-        this.player2.emit(JSON.stringify({
+        this.player2.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
                 color: "black",
             }
         }))
     }
+
     makeMove(socket: WebSocket, move: {
         from: string;
         to: string;
-    
-    }){
-       if(this.board.move.length % 2=== 0 && socket !== this.player1){
-        return;
-       }
-       if(this.board.move.length % 2=== 1 && socket !== this.player2){
-        return;
-       }
-       try {
-        this.board.move(move);
-       } catch (error) {
-        return;
-       }
+    }) {
+        // Validate turn
+        if (this.board.turn() === 'w' && socket !== this.player1) {
+            console.log("Not player1's turn");
+            return;
+        }
+        if (this.board.turn() === 'b' && socket !== this.player2) {
+            console.log("Not player2's turn");
+            return;
+        }
 
-        if(this.board.isGameOver()){
+        try {
+            this.board.move(move);
+        } catch (error) {
+            console.log("Invalid move", error);
+            return;
+        }
+
+        if (this.board.isGameOver()) {
+            const winner = this.board.turn() === "w" ? "black" : "white";
             this.player1.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: {
-                    winner: this.board.turn() === "w" ? this.player1 : this.player2,
-                }
-            }))
-        }
-        if(this.board.move.length % 2 === 0) {
-            this.player1.send(JSON.stringify({
-                type: MOVE,
-                payload: {
-                    board: this.board.board(),
+                    winner: winner,
                 }
             }))
             this.player2.send(JSON.stringify({
-                type: MOVE,
+                type: GAME_OVER,
                 payload: {
-                    board: this.board.board(),
+                    winner: winner,
                 }
             }))
+            return;
         }
+
+        // Notify both players of the move
+        const moveMsg = JSON.stringify({
+            type: MOVE,
+            payload: move
+        });
+        
+        this.player1.send(moveMsg);
+        this.player2.send(moveMsg);
     }
 }
