@@ -5,125 +5,122 @@ export function Landing() {
     const navigate = useNavigate();
 
     return (
-        <div className="landing-page">
-            {/* Navigation */}
-            <nav className="nav-bar">
-                <div className="container flex-between">
-                    <div className="logo">
-                        <h2 style={{ margin: 0, color: 'var(--color-text-light)' }}>♔ Chess</h2>
+        <div className="min-h-screen">
+            <nav className="w-full py-6 border-b border-white/10">
+                <div className="container mx-auto px-6 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl">♔</span>
+                        <h2 className="text-xl font-bold">Chess Online</h2>
                     </div>
-                    <div className="nav-links" style={{ display: 'flex', gap: 'var(--spacing-lg)' }}>
-                        <a href="#features" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', transition: 'color var(--transition-fast)' }}>Features</a>
-                        <a href="#play" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', transition: 'color var(--transition-fast)' }}>Play</a>
+                    <div className="hidden md:flex gap-8 items-center">
+                        <a href="#features" className="text-slate-400 hover:text-white transition-colors">Features</a>
+                        <a href="#play" className="text-slate-400 hover:text-white transition-colors">Play</a>
+                        <button 
+                            onClick={() => navigate('/game')}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-semibold transition-all"
+                        >
+                            Play Now
+                        </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <section className="hero-section">
-                <div className="container">
-                    <div className="hero-content">
-                        <div className="hero-text animate-fade-in">
-                            <h1 style={{ 
-                                background: 'linear-gradient(135deg, var(--color-text-light) 0%, var(--color-accent) 100%)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                                marginBottom: 'var(--spacing-md)'
-                            }}>
-                                Play Chess Online
-                            </h1>
-                            <p style={{ fontSize: '1.25rem', marginBottom: 'var(--spacing-xl)', maxWidth: '600px' }}>
-                                Challenge players from around the world in real-time chess matches. Improve your skills and climb the ranks.
+            <section className="py-20 md:py-32">
+                <div className="container mx-auto px-6">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white">
+                            Play Chess Online
+                        </h1>
+                        
+                        <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto">
+                            Challenge players from around the world in real-time chess matches. 
+                            Improve your skills and climb the ranks.
+                        </p>
+                        
+                        <button 
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-10 py-4 rounded-lg text-lg font-bold transition-all"
+                            onClick={() => navigate('/game')}
+                        >
+                            Start Playing
+                        </button>
+                    </div>
+
+                    <div className="mt-16 max-w-4xl mx-auto">
+                        <img 
+                            src={chessBoardImage} 
+                            alt="Chess Board" 
+                            className="w-full rounded-xl shadow-2xl"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <section className="py-16 border-y border-white/10">
+                <div className="container mx-auto px-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                        <div>
+                            <div className="text-4xl font-bold text-white mb-2">10K+</div>
+                            <div className="text-slate-500 text-sm">Active Players</div>
+                        </div>
+                        <div>
+                            <div className="text-4xl font-bold text-emerald-400 mb-2">50K+</div>
+                            <div className="text-slate-500 text-sm">Games Today</div>
+                        </div>
+                        <div>
+                            <div className="text-4xl font-bold text-white mb-2">Fast</div>
+                            <div className="text-slate-500 text-sm">Matchmaking</div>
+                        </div>
+                        <div>
+                            <div className="text-4xl font-bold text-emerald-400 mb-2">24/7</div>
+                            <div className="text-slate-500 text-sm">Always Online</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="py-24" id="features">
+                <div className="container mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">Why Play Here?</h2>
+                        <p className="text-slate-400 max-w-2xl mx-auto">Simple, fast, and built for chess players.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                        <div className="bg-slate-800/50 p-8 rounded-xl border border-white/10">
+                            <div className="text-4xl mb-4">⚡</div>
+                            <h3 className="text-xl font-bold mb-3 text-white">Real-Time Play</h3>
+                            <p className="text-slate-400">
+                                Instant matchmaking with players worldwide. No lag, no delays.
                             </p>
-                            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                                <button 
-                                    className="btn btn-primary btn-large"
-                                    onClick={() => navigate('/game')}
-                                >
-                                    Play Online
-                                </button>
-                                <button className="btn btn-secondary btn-large">
-                                    Learn Chess
-                                </button>
-                            </div>
                         </div>
-                        <div className="hero-image animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                            <img 
-                                src={chessBoardImage} 
-                                alt="Chess Board" 
-                                style={{ 
-                                    width: '100%', 
-                                    height: 'auto', 
-                                    borderRadius: 'var(--radius-xl)',
-                                    boxShadow: 'var(--shadow-xl)'
-                                }}
-                            />
+                        <div className="bg-slate-800/50 p-8 rounded-xl border border-white/10">
+                            <div className="text-4xl mb-4">📊</div>
+                            <h3 className="text-xl font-bold mb-3 text-white">Track Progress</h3>
+                            <p className="text-slate-400">
+                                Monitor your improvement with detailed statistics and ratings.
+                            </p>
+                        </div>
+                        <div className="bg-slate-800/50 p-8 rounded-xl border border-white/10">
+                            <div className="text-4xl mb-4">🏆</div>
+                            <h3 className="text-xl font-bold mb-3 text-white">Compete & Win</h3>
+                            <p className="text-slate-400">
+                                Join tournaments and climb the leaderboards.
+                            </p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Stats Section */}
-            <section className="stats-section">
-                <div className="container">
-                    <div className="stats-grid">
-                        <div className="stat-card card glass">
-                            <h3 style={{ color: 'var(--color-accent)', fontSize: '2.5rem', margin: 0 }}>10K+</h3>
-                            <p style={{ margin: 0, fontSize: '1rem' }}>Active Players</p>
-                        </div>
-                        <div className="stat-card card glass">
-                            <h3 style={{ color: 'var(--color-accent)', fontSize: '2.5rem', margin: 0 }}>50K+</h3>
-                            <p style={{ margin: 0, fontSize: '1rem' }}>Games Today</p>
-                        </div>
-                        <div className="stat-card card glass">
-                            <h3 style={{ color: 'var(--color-accent)', fontSize: '2.5rem', margin: 0 }}>24/7</h3>
-                            <p style={{ margin: 0, fontSize: '1rem' }}>Always Online</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            {/* Features Section */}
-            <section className="features-section" id="features">
-                <div className="container">
-                    <h2 style={{ textAlign: 'center', marginBottom: 'var(--spacing-2xl)' }}>
-                        Why Play Here?
-                    </h2>
-                    <div className="features-grid grid grid-3">
-                        <div className="feature-card card">
-                            <div style={{ fontSize: '3rem', marginBottom: 'var(--spacing-md)' }}>⚡</div>
-                            <h3>Real-Time Matches</h3>
-                            <p>Play instantly with opponents from around the world. Fast matchmaking and smooth gameplay.</p>
-                        </div>
-                        <div className="feature-card card">
-                            <div style={{ fontSize: '3rem', marginBottom: 'var(--spacing-md)' }}>📊</div>
-                            <h3>Track Progress</h3>
-                            <p>Monitor your improvement with detailed statistics and rating system.</p>
-                        </div>
-                        <div className="feature-card card">
-                            <div style={{ fontSize: '3rem', marginBottom: 'var(--spacing-md)' }}>🏆</div>
-                            <h3>Compete & Win</h3>
-                            <p>Join tournaments and climb the leaderboards to prove your skills.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="cta-section" id="play">
-                <div className="container">
-                    <div className="cta-content glass" style={{ 
-                        padding: 'var(--spacing-2xl)', 
-                        borderRadius: 'var(--radius-xl)',
-                        textAlign: 'center'
-                    }}>
-                        <h2 style={{ marginBottom: 'var(--spacing-md)' }}>Ready to Play?</h2>
-                        <p style={{ fontSize: '1.125rem', marginBottom: 'var(--spacing-xl)', maxWidth: '600px', margin: '0 auto var(--spacing-xl)' }}>
+            <section className="py-24" id="play">
+                <div className="container mx-auto px-6">
+                    <div className="bg-slate-800/50 border border-white/10 p-16 rounded-2xl text-center max-w-3xl mx-auto">
+                        <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">Ready to Play?</h2>
+                        <p className="text-lg text-slate-400 mb-10">
                             Join thousands of players and start your chess journey today.
                         </p>
                         <button 
-                            className="btn btn-primary btn-large"
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-12 py-4 rounded-lg text-lg font-bold transition-all"
                             onClick={() => navigate('/game')}
                         >
                             Start Playing Now
@@ -132,95 +129,11 @@ export function Landing() {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="footer">
-                <div className="container">
-                    <div style={{ textAlign: 'center', padding: 'var(--spacing-lg) 0' }}>
-                        <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>
-                            © 2026 Chess Online. Built for chess enthusiasts.
-                        </p>
-                    </div>
+            <footer className="py-10 border-t border-white/10">
+                <div className="container mx-auto px-6 text-center">
+                    <div className="text-slate-500 text-sm">© 2026 Chess Online. Built for chess enthusiasts.</div>
                 </div>
             </footer>
-
-            <style>{`
-                .landing-page {
-                    min-height: 100vh;
-                }
-
-                .nav-bar {
-                    padding: var(--spacing-md) 0;
-                    background: var(--color-bg-darker);
-                    position: sticky;
-                    top: 0;
-                    z-index: 100;
-                    box-shadow: var(--shadow-md);
-                }
-
-                .nav-links a:hover {
-                    color: var(--color-accent) !important;
-                }
-
-                .hero-section {
-                    padding: var(--spacing-2xl) 0;
-                    background: linear-gradient(135deg, var(--color-bg-dark) 0%, var(--color-bg-darker) 100%);
-                }
-
-                .hero-content {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: var(--spacing-2xl);
-                    align-items: center;
-                }
-
-                .stats-section {
-                    padding: var(--spacing-2xl) 0;
-                    background: var(--color-bg-darker);
-                }
-
-                .stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: var(--spacing-lg);
-                }
-
-                .stat-card {
-                    text-align: center;
-                    padding: var(--spacing-xl);
-                }
-
-                .features-section {
-                    padding: var(--spacing-2xl) 0;
-                }
-
-                .cta-section {
-                    padding: var(--spacing-2xl) 0;
-                    background: var(--color-bg-darker);
-                }
-
-                .footer {
-                    background: var(--color-bg-darker);
-                    border-top: 1px solid rgba(255, 255, 255, 0.1);
-                }
-
-                @media (max-width: 768px) {
-                    .hero-content {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .hero-text {
-                        text-align: center;
-                    }
-
-                    .hero-text > div {
-                        justify-content: center;
-                    }
-
-                    .nav-links {
-                        display: none !important;
-                    }
-                }
-            `}</style>
         </div>
     );
 }
