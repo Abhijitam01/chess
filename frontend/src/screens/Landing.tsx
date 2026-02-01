@@ -59,11 +59,11 @@ export function Landing() {
                 <div className="container mx-auto px-6">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                         <div>
-                            <div className="text-4xl font-bold text-white mb-2">10K+</div>
+                            <div className="text-4xl font-bold text-white mb-2">1+</div>
                             <div className="text-slate-500 text-sm">Active Players</div>
                         </div>
                         <div>
-                            <div className="text-4xl font-bold text-emerald-400 mb-2">50K+</div>
+                            <div className="text-4xl font-bold text-emerald-400 mb-2">5+</div>
                             <div className="text-slate-500 text-sm">Games Today</div>
                         </div>
                         <div>
@@ -132,6 +132,10 @@ export function Landing() {
             <footer className="py-10 border-t border-white/10">
                 <div className="container mx-auto px-6 text-center">
                     <div className="text-slate-500 text-sm">© 2026 Chess Online. Built for chess enthusiasts.</div>
+                    <div className="text-slate-500 text-sm">
+                        <a href="https://www.linkedin.com/in/abhijitam-dubey-3ab794263/" className="text-slate-500 hover:text-white transition-colors">LinkedIn</a>
+                        <a href="https://github.com/Abhijitam01" className="text-slate-500 hover:text-white transition-colors">GitHub</a>
+                    </div> 
                 </div>
             </footer>
         </div>

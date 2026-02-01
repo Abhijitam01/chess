@@ -2,23 +2,12 @@
 
 A real-time multiplayer chess application built with WebSocket technology, allowing players to compete against each other from anywhere in the world.
 
-## 🎯 Features
-
-- ✅ Real-time multiplayer gameplay
-- ✅ Automatic matchmaking (FIFO queue)
-- ✅ Complete chess rules validation
-- ✅ Interactive chess board with move highlighting
-- ✅ Responsive design (mobile & desktop)
-- ✅ Auto-reconnection on disconnect
-- ✅ Modern UI with dark theme
-
 ## 🏗️ Architecture
 
 ```
 chess/
 ├── backend1/          # WebSocket server (Node.js + TypeScript)
 ├── frontend/          # React app (Vite + TailwindCSS)
-└── docs/             # Documentation
 ```
 
 **Tech Stack:**
@@ -79,18 +68,6 @@ Frontend runs on `http://localhost:5173`
 5. Click a piece to select it, then click a destination square to move
 6. Game ends on checkmate, stalemate, or draw
 
-## 📚 Documentation
-
-Comprehensive documentation is available in [`docs/CODEBASE_DOCUMENTATION.md`](./docs/CODEBASE_DOCUMENTATION.md), covering:
-
-- Complete architecture breakdown
-- Every file explained block-by-block
-- Backend-frontend communication protocol
-- Enhancement opportunities
-- Scaling strategies
-- Security considerations
-- Testing strategies
-- Deployment guides
 
 ## 🔧 Development
 
@@ -108,27 +85,6 @@ cd frontend
 npm run dev
 ```
 
-## 🚀 Roadmap
-
-### Immediate Priorities
-
-1. Fix player disconnection bugs
-2. Add error handling and notifications
-3. Implement move history display
-4. Add sound effects
-5. Environment variable configuration
-
-### Planned Features
-
-- User authentication and accounts
-- ELO rating system
-- Game history and replay
-- Time controls (chess clock)
-- Chat functionality
-- Spectator mode
-- Tournament support
-
-See full roadmap in documentation.
 
 ## 📦 Project Structure
 
