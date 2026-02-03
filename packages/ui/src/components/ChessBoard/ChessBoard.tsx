@@ -84,8 +84,9 @@ export function ChessBoard({
   };
 
   return (
-    <div className="flex justify-center items-center">
-      <div className="grid grid-rows-8 border-4 border-slate-700 bg-slate-800 rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-full max-w-[650px] aspect-square relative z-10">
+    <div className="flex justify-center items-center w-full min-h-[500px] p-4 md:p-8">
+      <div className="w-full max-w-2xl aspect-square">
+        <div className="grid grid-rows-8 w-full h-full border-[6px] border-slate-900 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900">
         {displayRanks.map((rank, rankIndex) => (
           <div key={rank} className="grid grid-cols-8">
             {displayFiles.map((file, fileIndex) => {
@@ -95,22 +96,22 @@ export function ChessBoard({
               const isValidMove = validMoves.includes(square);
               const piece = chess.get(square);
 
-              const squareColor = isLight ? "bg-[#e2e8f0]" : "bg-[#334155]";
+              const squareColor = isLight ? "bg-gradient-to-br from-[#f1f5f9] to-[#e2e8f0]" : "bg-gradient-to-br from-[#475569] to-[#334155]";
 
               return (
                 <div
                   key={square}
                   className={`
-                    aspect-square flex items-center justify-center cursor-pointer relative transition-all duration-150
+                    aspect-square flex items-center justify-center cursor-pointer relative transition-all duration-200 ease-in-out
                     ${squareColor}
-                    ${isSelected ? "!bg-emerald-500/80 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]" : ""}
+                    ${isSelected ? "!bg-gradient-to-br !from-emerald-400 !to-emerald-600 shadow-[inset_0_0_30px_rgba(0,0,0,0.3)] scale-[0.98]" : ""}
                     ${
                       isValidMove && !piece
-                        ? 'after:content-[""] after:w-3 after:h-3 after:bg-emerald-500/50 after:rounded-full after:absolute'
+                        ? 'after:content-[""] after:w-4 after:h-4 after:bg-emerald-400/60 after:rounded-full after:absolute after:shadow-lg'
                         : ""
                     }
-                    ${isValidMove && piece ? "ring-4 ring-emerald-500/50 ring-inset" : ""}
-                    hover:brightness-110
+                    ${isValidMove && piece ? "ring-[5px] ring-emerald-400/70 ring-inset shadow-lg" : ""}
+                    hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]
                   `}
                   onClick={() => handleSquareClick(square)}
                 >
@@ -139,10 +140,10 @@ export function ChessBoard({
                         text-5xl md:text-7xl select-none pointer-events-none leading-none w-full h-full flex items-center justify-center
                         ${
                           piece.color === "w"
-                            ? "text-[#f8fafc] drop-shadow-[0_4px_3px_rgba(0,0,0,0.6)]"
-                            : "text-[#0f172a] drop-shadow-[0_4px_3px_rgba(255,255,255,0.3)]"
+                            ? "text-white drop-shadow-[0_6px_8px_rgba(0,0,0,0.8)] filter brightness-110"
+                            : "text-slate-900 drop-shadow-[0_6px_8px_rgba(255,255,255,0.4)] filter brightness-95"
                         }
-                        transition-transform duration-200 hover:scale-110
+                        transition-all duration-200
                       `}
                     >
                       {PIECE_SYMBOLS[piece.type.toLowerCase()]}
@@ -154,6 +155,7 @@ export function ChessBoard({
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }

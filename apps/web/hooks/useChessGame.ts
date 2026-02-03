@@ -51,7 +51,20 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
             const newChess = createChess();
             newChess.load(prev.chess.fen());
             try {
-              newChess.move(message.payload);
+              // The payload might be an object {from, to} or a string
+              const moveResult = typeof message.payload === 'string' 
+                ? newChess.move(message.payload)
+                : newChess.move({
+                    from: message.payload.from,
+                    to: message.payload.to,
+                    promotion: (message.payload as any).promotion || 'q'
+                  });
+              
+              if (!moveResult) {
+                console.error("Invalid move:", message.payload);
+                return prev;
+              }
+              
               return {
                 ...prev,
                 chess: newChess,

@@ -73,25 +73,25 @@ export function GameControls({
             <div className="mt-2">
                 {status === 'waiting' && (
                     <button 
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-emerald-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                         onClick={onStartGame}
                         disabled={!isConnected}
                     >
-                        Start Game
+                        🎮 Start Game
                     </button>
                 )}
 
                 {status === 'finished' && (
                     <div className="space-y-3">
-                        <div className="text-center p-4 bg-slate-900/50 rounded-lg">
-                            <div className="text-4xl mb-2">🏆</div>
-                            <h3 className="text-xl font-bold text-emerald-400 capitalize">{winner} Wins!</h3>
+                        <div className="text-center p-6 bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-xl border border-emerald-500/30">
+                            <div className="text-5xl mb-3">🏆</div>
+                            <h3 className="text-2xl font-bold text-emerald-400 capitalize">{winner} Wins!</h3>
                         </div>
                         <button 
-                            className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition-all"
+                            className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
                             onClick={() => window.location.reload()}
                         >
-                            Play Again
+                            🔄 Play Again
                         </button>
                     </div>
                 )}

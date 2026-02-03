@@ -7,7 +7,7 @@ import { GameControls } from "../../components/GameControls";
 import { useRouter } from "next/navigation";
 import { INIT_GAME, MOVE, GAME_OVER } from '@repo/types';
 
-const WS_URL = "ws://localhost:8080";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
 
 export default function Game() {
   const { socket, isConnected, sendMessage } = useWebSocket(WS_URL);
