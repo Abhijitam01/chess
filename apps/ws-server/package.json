@@ -1,0 +1,18 @@
+{
+  "name": "@chess/ws-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ts-node-dev src/index.ts"
+  },
+  "dependencies": {
+    "@chess/chess-engine": "workspace:*",
+    "@chess/shared-types": "workspace:*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.12",
+    "typescript": "^5.8.0"
+  }
+}

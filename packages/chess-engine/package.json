@@ -1,0 +1,10 @@
+{
+  "name": "@chess/chess-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "chess.js": "^1.0.0"
+  }
+}

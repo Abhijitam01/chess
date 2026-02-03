@@ -1,0 +1,27 @@
+{
+  "extends": "@repo/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@repo/ui": ["packages/ui/src"],
+      "@repo/ui/*": ["packages/ui/src/*"],
+      "@chess/shared-types": ["packages/shared-types/src"],
+      "@chess/chess-engine": ["packages/chess-engine/src"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    "next.config.js",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

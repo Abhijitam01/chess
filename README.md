@@ -1,123 +1,124 @@
-# Chess Online - Real-Time Multiplayer Chess
+# Turborepo starter
 
-A real-time multiplayer chess application built with WebSocket technology, allowing players to compete against each other from anywhere in the world.
+This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub Issues will be closed.
 
-## 🏗️ Architecture
+## Using this example
 
-```
-chess/
-├── backend1/          # WebSocket server (Node.js + TypeScript)
-├── frontend/          # React app (Vite + TailwindCSS)
-```
-
-**Tech Stack:**
-
-- **Backend**: Node.js, WebSocket (ws), chess.js, TypeScript
-- **Frontend**: React 19, Vite, TailwindCSS, TypeScript, chess.js
-- **Communication**: WebSocket with JSON messages
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and npm/pnpm
-
-### Installation
-
-1. **Clone the repository**
+Run the following command:
 
 ```bash
-git clone <your-repo-url>
-cd chess
+npx create-turbo@latest -e with-nestjs
 ```
 
-2. **Start Backend**
+## What's inside?
+
+This Turborepo includes the following packages & apps:
+
+### Apps and Packages
+
+```shell
+.
+├── apps
+│   ├── api                       # NestJS app (https://nestjs.com).
+│   └── web                       # Next.js app (https://nextjs.org).
+└── packages
+    ├── @repo/api                 # Shared `NestJS` resources.
+    ├── @repo/eslint-config       # `eslint` configurations (includes `prettier`)
+    ├── @repo/jest-config         # `jest` configurations
+    ├── @repo/typescript-config   # `tsconfig.json`s used throughout the monorepo
+    └── @repo/ui                  # Shareable stub React component library.
+```
+
+Each package and application are mostly written in [TypeScript](https://www.typescriptlang.org/).
+
+### Utilities
+
+This `Turborepo` has some additional tools already set for you:
+
+- [TypeScript](https://www.typescriptlang.org/) for static type-safety
+- [ESLint](https://eslint.org/) for code linting
+- [Prettier](https://prettier.io) for code formatting
+- [Jest](https://prettier.io) & [Playwright](https://playwright.dev/) for testing
+
+### Commands
+
+This `Turborepo` already configured useful commands for all your apps and packages.
+
+#### Build
 
 ```bash
-cd backend1
-npm install
-npm run build
-node dist/index.js
+# Will build all the app & packages with the supported `build` script.
+pnpm run build
+
+# ℹ️ If you plan to only build apps individually,
+# Please make sure you've built the packages first.
 ```
 
-Backend runs on `ws://localhost:8080`
-
-3. **Start Frontend** (in new terminal)
+#### Develop
 
 ```bash
-cd frontend
-npm install
-npm run dev
+# Will run the development server for all the app & packages with the supported `dev` script.
+pnpm run dev
 ```
 
-Frontend runs on `http://localhost:5173`
-
-4. **Play!**
-
-- Open two browser windows
-- Click "Play Now" in both
-- Click "Start Game" in both windows
-- You'll be matched automatically!
-
-## 🎮 How to Play
-
-1. Navigate to the landing page
-2. Click "Play Now" to enter the game page
-3. Click "Start Game" to join the matchmaking queue
-4. Once matched with an opponent, the game begins
-5. Click a piece to select it, then click a destination square to move
-6. Game ends on checkmate, stalemate, or draw
-
-
-## 🔧 Development
-
-### Backend Development
+#### test
 
 ```bash
-cd backend1
-npm run dev  
+# Will launch a test suites for all the app & packages with the supported `test` script.
+pnpm run test
+
+# You can launch e2e testes with `test:e2e`
+pnpm run test:e2e
+
+# See `@repo/jest-config` to customize the behavior.
 ```
 
-### Frontend Development
+#### Lint
 
 ```bash
-cd frontend
-npm run dev
+# Will lint all the app & packages with the supported `lint` script.
+# See `@repo/eslint-config` to customize the behavior.
+pnpm run lint
 ```
 
+#### Format
 
-## 📦 Project Structure
-
+```bash
+# Will format all the supported `.ts,.js,json,.tsx,.jsx` files.
+# See `@repo/eslint-config/prettier-base.js` to customize the behavior.
+pnpm format
 ```
-chess/
-├── backend1/
-│   ├── src/
-│   │   ├── index.ts           # WebSocket server entry
-│   │   ├── GameManager.ts     # Matchmaking logic
-│   │   ├── game.ts            # Chess game logic
-│   │   └── messages.ts        # Message constants
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── screens/
-│   │   │   ├── Landing.tsx    # Landing page
-│   │   │   └── game.tsx       # Game page
-│   │   ├── components/
-│   │   │   ├── ChessBoard.tsx # Interactive board
-│   │   │   └── GameControls.tsx
-│   │   ├── hooks/
-│   │   │   ├── useWebSocket.ts
-│   │   │   └── useChessGame.ts
-│   │   └── main.tsx
-│   └── package.json
 
+### Remote Caching
 
+> [!TIP]
+> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
 
-## 🙏 Acknowledgments
+Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
 
-- [chess.js](https://github.com/jhlywa/chess.js) - Chess logic library
-- [ws](https://github.com/websockets/ws) - WebSocket library
-- React, Vite, TailwindCSS teams
+By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
 
----
+```bash
+npx turbo login
+```
 
+This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+
+Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+
+```bash
+npx turbo link
+```
+
+## Useful Links
+
+This example take some inspiration the [with-nextjs](https://github.com/vercel/turborepo/tree/main/examples/with-nextjs) `Turbo` example and [01-cats-app](https://github.com/nestjs/nest/tree/master/sample/01-cats-app) `NestJs` sample.
+
+Learn more about the power of Turborepo:
+
+- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
+- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
+- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
+- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
+- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
+- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
