@@ -1,5 +1,5 @@
 const nextConfig = {
-  transpilePackages: ["@repo/common"],
+  transpilePackages: ["@repo/utils"],
   output: 'standalone',
 };
 

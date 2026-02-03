@@ -1,18 +1,27 @@
 {
-    "compilerOptions": {
-        "target": "ES2022",
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        "lib": ["ES2022", "DOM", "DOM.Iterable"],
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
-        "composite": false,
-        "strict": true,
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "resolveJsonModule": true,
-        "isolatedModules": true
+  "compilerOptions": {
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "moduleResolution": "node",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "target": "ESNext",
+    "baseUrl": ".",
+    "paths": {
+      "@chess/chess-engine": ["packages/chess-engine/src/index.ts"],
+      "@repo/types": ["packages/types/src/index.ts"],
+      "@repo/ui": ["packages/ui/src/index.tsx"],
+      "@repo/utils": ["packages/utils/src/index.ts"]
     }
+  },
+  "exclude": ["node_modules"]
 }

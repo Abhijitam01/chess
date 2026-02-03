@@ -1,14 +1,17 @@
 import { WebSocket, WebSocketServer } from "ws";
-import { GameManager } from "./GameManager.js";
+import { GameManager } from "./GameManager";
 
-const wss = new WebSocketServer({ port: 8080 });
+const port = process.env.PORT ? Number(process.env.PORT) : 8080;
+const wss = new WebSocketServer({ port });
 
 const gameManager = new GameManager();
 
-wss.on("connection", function connection(ws : WebSocket) {
+wss.on("connection", (ws: WebSocket) => {
   gameManager.addUserToGame(ws);
 
-  ws.on("close", function close() {
+  ws.on("close", () => {
     gameManager.removeUserFromGame(ws);
   });
 });
+
+console.log(`WebSocket server listening on port ${port}`);

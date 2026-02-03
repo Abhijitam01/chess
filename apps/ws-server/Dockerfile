@@ -4,9 +4,10 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install
-RUN npm run build
+RUN npm install -g pnpm
+RUN pnpm install
+RUN pnpm run build
 
 WORKDIR /app/apps/ws-server
 
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "run", "start"]

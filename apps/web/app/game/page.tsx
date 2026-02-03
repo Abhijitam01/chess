@@ -5,7 +5,7 @@ import { useChessGame } from "../../hooks/useChessGame";
 import { ChessBoard } from "../../components/ChessBoard";
 import { GameControls } from "../../components/GameControls";
 import { useRouter } from "next/navigation";
-import { INIT_GAME } from "@repo/common";
+import { INIT_GAME, MOVE, GAME_OVER } from '@repo/types';
 
 const WS_URL = "ws://localhost:8080";
 

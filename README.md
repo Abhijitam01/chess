@@ -1,123 +1,63 @@
-# Chess Online - Real-Time Multiplayer Chess
+# Chess Monorepo ♟️
 
-A real-time multiplayer chess application built with WebSocket technology, allowing players to compete against each other from anywhere in the world.
+A modern, real-time multiplayer chess application built with a high-performance stack. This monorepo leverages Turborepo for efficient build orchestration.
 
-## 🏗️ Architecture
+## 🏗 Architecture
 
-```
-chess/
-├── backend1/          # WebSocket server (Node.js + TypeScript)
-├── frontend/          # React app (Vite + TailwindCSS)
-```
+The project is structured as a monorepo using **Turborepo** and **pnpm workspaces**:
 
-**Tech Stack:**
+### Apps
+- **`apps/web`**: **Next.js 15+** frontend with **Tailwind CSS**. Handles the UI, game rendering, and user interactions.
+- **`apps/api`**: **NestJS** backend service. Manages RESTful endpoints (if any) and potential future orchestrations.
+- **`apps/ws-server`**: **Node.js** WebSocket server using `ws`. Handles real-time game state, moves, and player connections for low-latency performance.
 
-- **Backend**: Node.js, WebSocket (ws), chess.js, TypeScript
-- **Frontend**: React 19, Vite, TailwindCSS, TypeScript, chess.js
-- **Communication**: WebSocket with JSON messages
+### Packages
+- **`packages/chess-engine`**: Core chess logic (wrapping `chess.js`) shared across frontend and backend.
+- **`packages/shared-types`**: TypeScript interfaces and DTOs shared between all apps to ensure type safety.
+- **`packages/ui`**: Shared UI component library.
+- **`packages/config`**: Shared configurations (ESLint, Tailwind, TypeScript).
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
 ### Prerequisites
+- [Node.js](https://nodejs.org/) (v20+)
+- [pnpm](https://pnpm.io/) (v8+)
+- [Docker](https://www.docker.com/) (optional, for containerized run)
 
-- Node.js 18+ and npm/pnpm
+### Local Development
 
-### Installation
+1.  **Install dependencies:**
+    ```bash
+    pnpm install
+    ```
 
-1. **Clone the repository**
+2.  **Start all applications in development mode:**
+    ```bash
+    pnpm dev
+    ```
+    - Web: [http://localhost:3000](http://localhost:3000)
+    - API: [http://localhost:3001](http://localhost:3001)
+    - WS Server: `ws://localhost:8080`
 
-```bash
-git clone <your-repo-url>
-cd chess
-```
+### 🐳 Docker (Production Preview)
 
-2. **Start Backend**
-
-```bash
-cd backend1
-npm install
-npm run build
-node dist/index.js
-```
-
-Backend runs on `ws://localhost:8080`
-
-3. **Start Frontend** (in new terminal)
+Run the entire stack with a single command:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+docker-compose up --build
 ```
 
-Frontend runs on `http://localhost:5173`
+This will start:
+- **Web App** on port `3000`
+- **API Service** on port `3001` (mapped from 3000 inside container)
+- **WS Server** on port `8080`
 
-4. **Play!**
+## 🛠 Build
 
-- Open two browser windows
-- Click "Play Now" in both
-- Click "Start Game" in both windows
-- You'll be matched automatically!
-
-## 🎮 How to Play
-
-1. Navigate to the landing page
-2. Click "Play Now" to enter the game page
-3. Click "Start Game" to join the matchmaking queue
-4. Once matched with an opponent, the game begins
-5. Click a piece to select it, then click a destination square to move
-6. Game ends on checkmate, stalemate, or draw
-
-
-## 🔧 Development
-
-### Backend Development
+To build all apps and packages:
 
 ```bash
-cd backend1
-npm run dev  
+pnpm run build
 ```
 
-### Frontend Development
-
-```bash
-cd frontend
-npm run dev
-```
-
-
-## 📦 Project Structure
-
-```
-chess/
-├── backend1/
-│   ├── src/
-│   │   ├── index.ts           # WebSocket server entry
-│   │   ├── GameManager.ts     # Matchmaking logic
-│   │   ├── game.ts            # Chess game logic
-│   │   └── messages.ts        # Message constants
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── screens/
-│   │   │   ├── Landing.tsx    # Landing page
-│   │   │   └── game.tsx       # Game page
-│   │   ├── components/
-│   │   │   ├── ChessBoard.tsx # Interactive board
-│   │   │   └── GameControls.tsx
-│   │   ├── hooks/
-│   │   │   ├── useWebSocket.ts
-│   │   │   └── useChessGame.ts
-│   │   └── main.tsx
-│   └── package.json
-
-
-
-## 🙏 Acknowledgments
-
-- [chess.js](https://github.com/jhlywa/chess.js) - Chess logic library
-- [ws](https://github.com/websockets/ws) - WebSocket library
-- React, Vite, TailwindCSS teams
-
----
-
+Turborepo will cache the build artifacts, making subsequent builds extremely fast.

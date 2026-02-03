@@ -4,8 +4,10 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install
-RUN npm run build
+RUN npm install -g pnpm
+RUN pnpm install
+RUN pnpm run build
+
 
 FROM node:20-alpine AS runner
 

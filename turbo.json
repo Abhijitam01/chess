@@ -1,14 +1,42 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
-    },
-    "lint": {},
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "tasks": {
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "lint": {},
+    "web#dev": {
+      "cache": false,
+      "persistent": true,
+      "outputs": []
+    },
+    "web#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["apps/web/.next/**", "!apps/web/.next/cache/**"]
+    },
+    "api#dev": {
+      "cache": false,
+      "persistent": true,
+      "outputs": []
+    },
+    "api#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["apps/api/dist/**"]
+    },
+    "ws-server#dev": {
+      "cache": false,
+      "persistent": true,
+      "outputs": []
+    },
+    "ws-server#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["apps/ws-server/dist/**"]
     }
   }
 }

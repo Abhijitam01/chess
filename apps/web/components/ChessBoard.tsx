@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { Chess, type Square } from 'chess.js';
+import { Chess, type Square } from '@chess/chess-engine';
 
 interface ChessBoardProps {
     chess: Chess;
