@@ -1,5 +1,6 @@
 import { Chess } from "chess.js";
-import type { Color, MovePayload } from "@repo/types";
+import type { Color } from "@repo/types";
+import type { MovePayload } from "@repo/types";
 
 export class Game {
   private board: Chess;

@@ -84,6 +84,19 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
             winner: message.payload.winner,
           }));
           break;
+
+        case "opponent_left":
+          setGameState((prev) => ({
+            ...prev,
+            status: "finished",
+            winner: prev.playerColor === "white" ? "black" : "white",
+          }));
+          alert(message.payload.message);
+          break;
+
+        case "invalid_move":
+          alert(`Invalid Move : ${message.payload.error}`  );
+          break;
       }
     };
 

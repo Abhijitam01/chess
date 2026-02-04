@@ -3,6 +3,7 @@ import { Game as ChessGame } from "@chess/chess-engine";
 import {
   GAME_OVER,
   INIT_GAME,
+  INVALID_MOVE,
   MOVE,
   type MovePayload,
 } from "@repo/types";
@@ -48,9 +49,16 @@ export class Game {
       return;
     }
 
-    const moved = this.engine.tryMove(move);
-    if (!moved) {
-      console.log("Invalid move");
+    try {
+      this.engine.tryMove(move);
+    } catch (error) {
+      socket.send(JSON.stringify({
+        type :INVALID_MOVE,
+        payload : {
+          error : "Invalid Move , please try again",
+          move : move
+        }
+      }));
       return;
     }
 

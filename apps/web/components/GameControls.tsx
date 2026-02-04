@@ -1,4 +1,5 @@
 "use client";
+
 interface GameControlsProps {
     isConnected: boolean;
     playerColor: 'white' | 'black' | null;
@@ -18,78 +19,245 @@ export function GameControls({
     winner,
     onStartGame 
 }: GameControlsProps) {
+    
+    const cardStyle: React.CSSProperties = {
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        padding: '1.5rem',
+        borderRadius: '1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5rem',
+        width: '100%',
+        maxWidth: '360px',
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+    };
+
+    const headerStyle: React.CSSProperties = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: '1rem',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+    };
+
+    const getBadgeStyle = (): React.CSSProperties => {
+        const baseStyle: React.CSSProperties = {
+            padding: '0.25rem 0.75rem',
+            borderRadius: '9999px',
+            fontSize: '0.75rem',
+            fontWeight: 600
+        };
+        
+        if (status === 'waiting') {
+            return { ...baseStyle, background: 'rgba(234, 179, 8, 0.2)', color: '#facc15' };
+        } else if (status === 'playing') {
+            return { ...baseStyle, background: 'rgba(16, 185, 129, 0.2)', color: '#34d399' };
+        }
+        return { ...baseStyle, background: 'rgba(100, 116, 139, 0.2)', color: '#94a3b8' };
+    };
+
+    const statusBoxStyle: React.CSSProperties = {
+        background: 'rgba(15, 23, 42, 0.5)',
+        padding: '1rem',
+        borderRadius: '0.75rem',
+        textAlign: 'center'
+    };
+
+    const playerBadgeStyle: React.CSSProperties = {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        background: 'rgba(15, 23, 42, 0.5)',
+        padding: '1rem',
+        borderRadius: '0.75rem'
+    };
+
+    const playerIconStyle = (color: 'white' | 'black'): React.CSSProperties => ({
+        width: '2.5rem',
+        height: '2.5rem',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.25rem',
+        background: color === 'white' ? '#ffffff' : '#1e293b',
+        color: color === 'white' ? '#1e293b' : '#ffffff',
+        border: color === 'black' ? '2px solid #475569' : 'none'
+    });
+
+    const turnIndicatorStyle = (isActive: boolean): React.CSSProperties => ({
+        padding: '0.75rem',
+        borderRadius: '0.75rem',
+        border: `2px solid ${isActive ? '#10b981' : '#334155'}`,
+        background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(15, 23, 42, 0.3)',
+        opacity: isActive ? 1 : 0.5,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.25rem',
+        transition: 'all 0.2s ease'
+    });
+
+    const buttonPrimaryStyle: React.CSSProperties = {
+        width: '100%',
+        background: 'linear-gradient(135deg, #10b981, #059669)',
+        color: 'white',
+        fontWeight: 700,
+        padding: '1rem 2rem',
+        borderRadius: '0.75rem',
+        border: 'none',
+        cursor: isConnected ? 'pointer' : 'not-allowed',
+        opacity: isConnected ? 1 : 0.5,
+        fontSize: '1rem',
+        boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)',
+        transition: 'all 0.2s ease'
+    };
+
+    const buttonSecondaryStyle: React.CSSProperties = {
+        width: '100%',
+        background: 'linear-gradient(135deg, #475569, #334155)',
+        color: 'white',
+        fontWeight: 700,
+        padding: '1rem 2rem',
+        borderRadius: '0.75rem',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1rem',
+        transition: 'all 0.2s ease'
+    };
+
+    const winnerBoxStyle: React.CSSProperties = {
+        textAlign: 'center',
+        padding: '1.5rem',
+        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8))',
+        borderRadius: '0.75rem',
+        border: '1px solid rgba(16, 185, 129, 0.3)'
+    };
+
     return (
-        <div className="bg-slate-800/50 border border-white/10 p-6 rounded-xl flex flex-col gap-6 w-full">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                <h2 className="text-xl font-bold text-white">Game Status</h2>
-                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    status === 'waiting' ? 'bg-yellow-500/20 text-yellow-400' : 
-                    status === 'playing' ? 'bg-emerald-500/20 text-emerald-400' : 
-                    'bg-slate-500/20 text-slate-400'
-                }`}>
-                    {status === 'waiting' && 'Waiting for Opponent'}
+        <div style={cardStyle}>
+            {/* Header */}
+            <div style={headerStyle}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                    Game Status
+                </h2>
+                <div style={getBadgeStyle()}>
+                    {status === 'waiting' && 'Waiting'}
                     {status === 'playing' && 'In Game'}
                     {status === 'finished' && 'Game Over'}
                 </div>
             </div>
 
-            <div className="flex flex-col gap-4">
-                
-                <div className="bg-slate-900/50 p-4 rounded-lg text-center">
-                    <div className="text-lg font-bold text-white">
-                        {status === 'waiting' && "Waiting for Opponent"}
-                        {status === 'playing' && (isMyTurn ? "Your Turn" : "Opponent's Turn")}
-                        {status === 'finished' && "Game Over"}
-                    </div>
-                </div>
-
-                {playerColor && (
-                    <div className="flex items-center gap-3 bg-slate-900/50 p-4 rounded-lg">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${playerColor === 'white' ? 'bg-white text-black' : 'bg-slate-900 text-white border-2 border-slate-600'}`}>
-                            {playerColor === 'white' ? '♔' : '♚'}
-                        </div>
-                        <div>
-                            <div className="text-xs text-slate-400">Playing as</div>
-                            <div className="text-base font-bold text-white capitalize">{playerColor}</div>
-                        </div>
-                    </div>
-                )}
-
-                {status === 'playing' && (
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 transition-all ${turn === 'w' ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-900/30 opacity-50'}`}>
-                            <span className="text-2xl">♔</span>
-                            <span className="text-xs font-semibold">White</span>
-                        </div>
-                        <div className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 transition-all ${turn === 'b' ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-900/30 opacity-50'}`}>
-                            <span className="text-2xl">♚</span>
-                            <span className="text-xs font-semibold">Black</span>
-                        </div>
-                    </div>
-                )}
+            {/* Connection Status */}
+            <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                background: isConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem'
+            }}>
+                <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: isConnected ? '#10b981' : '#ef4444'
+                }} />
+                <span style={{ color: isConnected ? '#34d399' : '#f87171' }}>
+                    {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
             </div>
 
-            
-            <div className="mt-2">
+            {/* Status Box */}
+            <div style={statusBoxStyle}>
+                <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#ffffff' }}>
+                    {status === 'waiting' && "Waiting for Opponent..."}
+                    {status === 'playing' && (isMyTurn ? "✨ Your Turn!" : "⏳ Opponent's Turn")}
+                    {status === 'finished' && "Game Over"}
+                </div>
+            </div>
+
+            {/* Player Color Badge */}
+            {playerColor && (
+                <div style={playerBadgeStyle}>
+                    <div style={playerIconStyle(playerColor)}>
+                        {playerColor === 'white' ? '♔' : '♚'}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Playing as</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', textTransform: 'capitalize' }}>
+                            {playerColor}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Turn Indicators */}
+            {status === 'playing' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div style={turnIndicatorStyle(turn === 'w')}>
+                        <span style={{ fontSize: '1.5rem' }}>♔</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: turn === 'w' ? '#34d399' : '#64748b' }}>
+                            White
+                        </span>
+                    </div>
+                    <div style={turnIndicatorStyle(turn === 'b')}>
+                        <span style={{ fontSize: '1.5rem' }}>♚</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: turn === 'b' ? '#34d399' : '#64748b' }}>
+                            Black
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ marginTop: '0.5rem' }}>
                 {status === 'waiting' && (
                     <button 
-                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-emerald-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        style={buttonPrimaryStyle}
                         onClick={onStartGame}
                         disabled={!isConnected}
+                        onMouseEnter={(e) => {
+                            if (isConnected) {
+                                (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                                (e.target as HTMLButtonElement).style.boxShadow = '0 8px 30px rgba(16, 185, 129, 0.5)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+                            (e.target as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(16, 185, 129, 0.3)';
+                        }}
                     >
                         🎮 Start Game
                     </button>
                 )}
 
                 {status === 'finished' && (
-                    <div className="space-y-3">
-                        <div className="text-center p-6 bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-xl border border-emerald-500/30">
-                            <div className="text-5xl mb-3">🏆</div>
-                            <h3 className="text-2xl font-bold text-emerald-400 capitalize">{winner} Wins!</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={winnerBoxStyle}>
+                            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🏆</div>
+                            <h3 style={{ 
+                                fontSize: '1.5rem', 
+                                fontWeight: 700, 
+                                color: '#34d399', 
+                                textTransform: 'capitalize',
+                                margin: 0 
+                            }}>
+                                {winner} Wins!
+                            </h3>
                         </div>
                         <button 
-                            className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                            style={buttonSecondaryStyle}
                             onClick={() => window.location.reload()}
+                            onMouseEnter={(e) => {
+                                (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+                            }}
                         >
                             🔄 Play Again
                         </button>

@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import { Game } from "./game";
-import { INIT_GAME, MOVE, type ClientMessage } from "@repo/types";
+import { GAME_OVER, INIT_GAME, MOVE, OPONENT_LEFT, type ClientMessage } from "@repo/types";
 
 export class GameManager {
   private games: Game[] = [];
@@ -15,7 +15,25 @@ export class GameManager {
 
   removeUserFromGame(socket: WebSocket) {
     console.log("User removed from GameManager");
+
+    const gameIndex = this.games.findIndex((game) => game.player1 === socket || game.player2 === socket);
+    if (gameIndex !== -1) {
+      const  game = this.games[gameIndex];
+      const opponent = game.player1 === socket ? game.player2 : game.player1;
+      opponent.send(JSON.stringify({
+        type: OPONENT_LEFT,
+        payload: {
+          message: "Opponent left the game",
+        },
+      }));
+      this.games.splice(gameIndex, 1);
+    }
+
     this.users = this.users.filter((user) => user !== socket);
+
+    if (this.pendingUser === socket) {
+      this.pendingUser = null;
+    }
   }
 
   private addHandler(socket: WebSocket) {
