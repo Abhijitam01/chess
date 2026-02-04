@@ -85,10 +85,26 @@ export function ChessBoard({
 
   return (
     <div className="flex justify-center items-center w-full min-h-[500px] p-4 md:p-8">
-      <div className="w-full max-w-2xl aspect-square">
-        <div className="grid grid-rows-8 w-full h-full border-[6px] border-slate-900 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900">
+      {/* Use inline styles for critical layout to prevent stacking issues if Tailwind fails */}
+      <div 
+        className="chess-board w-full max-w-2xl shadow-2xl rounded-sm overflow-hidden border-4 border-neutral-800"
+        style={{
+          display: 'grid',
+          gridTemplateRows: 'repeat(8, 1fr)',
+          aspectRatio: '1/1'
+        }}
+      >
         {displayRanks.map((rank, rankIndex) => (
-          <div key={rank} className="grid grid-cols-8">
+          <div 
+            key={rank} 
+            className="chess-row"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(8, 1fr)',
+              width: '100%',
+              height: '100%'
+            }}
+          >
             {displayFiles.map((file, fileIndex) => {
               const square = `${file}${rank}` as Square;
               const isLight = isLightSquare(fileIndex, rankIndex);
@@ -96,29 +112,24 @@ export function ChessBoard({
               const isValidMove = validMoves.includes(square);
               const piece = chess.get(square);
 
-              const squareColor = isLight ? "bg-gradient-to-br from-[#f1f5f9] to-[#e2e8f0]" : "bg-gradient-to-br from-[#475569] to-[#334155]";
-
+              // Use styles defined in globals.css via these classes
               return (
                 <div
                   key={square}
                   className={`
-                    aspect-square flex items-center justify-center cursor-pointer relative transition-all duration-200 ease-in-out
-                    ${squareColor}
-                    ${isSelected ? "!bg-gradient-to-br !from-emerald-400 !to-emerald-600 shadow-[inset_0_0_30px_rgba(0,0,0,0.3)] scale-[0.98]" : ""}
-                    ${
-                      isValidMove && !piece
-                        ? 'after:content-[""] after:w-4 after:h-4 after:bg-emerald-400/60 after:rounded-full after:absolute after:shadow-lg'
-                        : ""
-                    }
-                    ${isValidMove && piece ? "ring-[5px] ring-emerald-400/70 ring-inset shadow-lg" : ""}
-                    hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]
+                    chess-square
+                    ${isLight ? "light" : "dark"}
+                    ${isSelected ? "selected" : ""}
+                    ${isValidMove ? "valid-move" : ""}
+                    ${isValidMove && piece ? "valid-capture" : ""}
                   `}
                   onClick={() => handleSquareClick(square)}
                 >
+                  {/* Coordinates */}
                   {fileIndex === 0 && (
                     <span
                       className={`absolute top-0.5 left-1 text-[10px] font-bold ${
-                        isLight ? "text-slate-600" : "text-slate-400"
+                         isLight ? "text-neutral-500" : "text-neutral-400"
                       }`}
                     >
                       {rank}
@@ -127,7 +138,7 @@ export function ChessBoard({
                   {rankIndex === 7 && (
                     <span
                       className={`absolute bottom-0.5 right-1 text-[10px] font-bold ${
-                        isLight ? "text-slate-600" : "text-slate-400"
+                        isLight ? "text-neutral-500" : "text-neutral-400"
                       }`}
                     >
                       {file}
@@ -136,15 +147,7 @@ export function ChessBoard({
 
                   {piece && (
                     <div
-                      className={`
-                        text-5xl md:text-7xl select-none pointer-events-none leading-none w-full h-full flex items-center justify-center
-                        ${
-                          piece.color === "w"
-                            ? "text-white drop-shadow-[0_6px_8px_rgba(0,0,0,0.8)] filter brightness-110"
-                            : "text-slate-900 drop-shadow-[0_6px_8px_rgba(255,255,255,0.4)] filter brightness-95"
-                        }
-                        transition-all duration-200
-                      `}
+                      className={`chess-piece ${piece.color === "w" ? "white" : "black"}`}
                     >
                       {PIECE_SYMBOLS[piece.type.toLowerCase()]}
                     </div>
@@ -155,7 +158,6 @@ export function ChessBoard({
           </div>
         ))}
       </div>
-    </div>
     </div>
   );
 }

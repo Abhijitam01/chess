@@ -31,6 +31,14 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
   });
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
 
+  const resign = () => {
+    if (socket && isConnected) {
+      socket.send(JSON.stringify({
+        type : "resign"
+      }));
+    }
+  }
+
 
   useEffect(() => {
     if (!socket) return;
@@ -152,6 +160,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     makeMove,
     resetGame,
     moveHistory,
+    resign,
     isMyTurn:
       gameState.playerColor !== null &&
       ((gameState.playerColor === "white" && gameState.turn === "w") ||

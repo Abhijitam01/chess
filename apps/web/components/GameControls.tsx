@@ -8,6 +8,7 @@ interface GameControlsProps {
     isMyTurn: boolean;
     winner: string | null;
     onStartGame: () => void;
+    onResign: () => void;
 }
 
 export function GameControls({ 
@@ -17,7 +18,8 @@ export function GameControls({
     turn,
     isMyTurn,
     winner,
-    onStartGame 
+    onStartGame,
+    onResign
 }: GameControlsProps) {
     
     const cardStyle: React.CSSProperties = {
@@ -235,6 +237,14 @@ export function GameControls({
                     </button>
                 )}
 
+                {status === 'playing' && (
+                    <button 
+                        style={buttonSecondaryStyle}
+                        onClick={onResign}
+                    >
+                        Resign Game
+                    </button>
+                )}
                 {status === 'finished' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <div style={winnerBoxStyle}>

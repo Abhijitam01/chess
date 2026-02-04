@@ -6,6 +6,7 @@ export const GAME_OVER = "game_over" as const;
 export const JOIN_GAME = "join_game" as const;
 export const OPONENT_LEFT = "opponent_left" as const;
 export const INVALID_MOVE = "invalid_move" as const;
+export const RESIGN = "resign" as const;
 
 export interface OpponentLeftPayload {
   message: string;
@@ -15,6 +16,13 @@ export interface InitGamePayload {
   color: Color;
 }
 
+export interface ResignPayload {
+  message: string;
+}
+export interface ServerResignMessage {
+  type: typeof RESIGN;
+  payload: ResignPayload;
+}
 export interface MovePayload {
   from: string;
   to: string;
@@ -59,6 +67,7 @@ export type ServerMessage =
   | ServerMoveMessage
   | ServerGameOverMessage
   | ServerOpponentLeftMessage
+  | ServerResignMessage
   | ServerInvalidMoveMessage;
 
 export interface ClientInitGameMessage {
@@ -70,4 +79,11 @@ export interface ClientMoveMessage {
   move: MovePayload;
 }
 
-export type ClientMessage = ClientInitGameMessage | ClientMoveMessage;
+
+
+
+export interface ClientResignMessage {
+  type: typeof RESIGN;
+}
+
+export type ClientMessage = ClientInitGameMessage | ClientMoveMessage | ClientResignMessage;

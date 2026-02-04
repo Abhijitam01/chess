@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import { Game } from "./game";
-import { GAME_OVER, INIT_GAME, MOVE, OPONENT_LEFT, type ClientMessage } from "@repo/types";
+import { GAME_OVER, INIT_GAME, MOVE, OPONENT_LEFT, RESIGN, type ClientMessage } from "@repo/types";
 
 export class GameManager {
   private games: Game[] = [];
@@ -60,6 +60,24 @@ export class GameManager {
         );
         if (game) {
           game.makeMove(socket, message.move);
+        }
+      }
+      if (message.type === RESIGN) {
+        const game = this.games.find(
+          (game) => game.player1 === socket || game.player2 === socket,
+        );
+        if (game) {
+          const resigningPlayer  = game.player1 === socket ?  "white" : "black";
+          const winner = resigningPlayer === "white" ? "black" : "white";
+          const gameOver = JSON.stringify({
+            type: GAME_OVER,
+            payload: {
+              winner,
+            },
+          });
+          game.player1.send(gameOver);
+          game.player2.send(gameOver);
+          this.games = this.games.filter(g => g !== game);
         }
       }
     });

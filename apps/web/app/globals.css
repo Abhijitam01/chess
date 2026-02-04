@@ -1,16 +1,18 @@
 @import "tailwindcss";
 
 /* ============================================
-   Chess App - Custom Styles
+   Chess App - Custom Styles (Black & White Theme)
    ============================================ */
 
 /* Root variables for theming */
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --primary: #10b981;
-  --secondary: #3b82f6;
-  --accent: #8b5cf6;
+  --background: #000000;
+  --foreground: #ffffff;
+  --primary: #ffffff;
+  --secondary: #a3a3a3; /* neutral-400 */
+  --accent: #404040; /* neutral-700 */
+  --board-dark: #262626; /* neutral-800 */
+  --board-light: #525252; /* neutral-600 */
 }
 
 /* Base styles */
@@ -18,12 +20,12 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
   color: var(--foreground);
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  background: var(--background);
   min-height: 100vh;
 }
 
@@ -32,6 +34,8 @@ body {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+  /* Ensure borders are visible in high contrast */
+  border-color: #333;
 }
 
 a {
@@ -46,29 +50,29 @@ html {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
+  background: #333;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #555;
 }
 
 /* Animation utilities */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
   }
   50% {
-    box-shadow: 0 0 40px rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -89,11 +93,13 @@ html {
   animation: float 3s ease-in-out infinite;
 }
 
-/* Chess board specific styles */
+/* Chess board specific styles - Fallback if component styles fail */
 .chess-board {
   display: grid;
   grid-template-rows: repeat(8, 1fr);
   aspect-ratio: 1;
+  background: #111;
+  border: 1px solid #333;
 }
 
 .chess-row {
@@ -112,33 +118,39 @@ html {
 }
 
 .chess-square:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.2);
 }
 
 .chess-square.light {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background-color: var(--board-light);
 }
 
 .chess-square.dark {
-  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  background-color: var(--board-dark);
 }
 
 .chess-square.selected {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
+  background-color: #fff !important;
+  color: #000 !important;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.chess-square.selected .chess-piece {
+    filter: invert(1);
+    color: #000; 
 }
 
 .chess-square.valid-move::after {
   content: "";
   position: absolute;
-  width: 30%;
-  height: 30%;
-  background: rgba(16, 185, 129, 0.6);
+  width: 20%;
+  height: 20%;
+  background: rgba(255, 255, 255, 0.5);
   border-radius: 50%;
 }
 
 .chess-square.valid-capture {
-  box-shadow: inset 0 0 0 4px rgba(16, 185, 129, 0.5);
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.5);
 }
 
 .chess-piece {
@@ -151,86 +163,94 @@ html {
 
 .chess-piece.white {
   color: #ffffff;
-  text-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8));
 }
 
 .chess-piece.black {
-  color: #1e293b;
-  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
+  color: #000000;
+  /* Make black pieces visible on dark squares with a strong outline/glow */
+  filter: drop-shadow(0 0 2px rgba(255,255,255,0.8));
 }
 
-/* Button styles */
+/* Button styles - Black and White */
 .btn-primary {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  background: #fff;
+  color: #000;
   font-weight: 700;
   padding: 1rem 2rem;
-  border-radius: 0.75rem;
-  border: none;
+  border-radius: 4px; /* Sharper corners for modern look */
+  border: 1px solid #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5);
+  background: #000;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: translateY(1px);
 }
 
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
+  background: #333;
+  color: #666;
+  border-color: #333;
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #475569 0%, #334155 100%);
-  color: white;
+  background: transparent;
+  color: #fff;
   font-weight: 700;
   padding: 1rem 2rem;
-  border-radius: 0.75rem;
-  border: none;
+  border-radius: 4px;
+  border: 1px solid #333;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-  transform: translateY(-2px);
+  border-color: #fff;
+  background: #111;
 }
 
 /* Card styles */
 .card {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 8px;
   padding: 1.5rem;
-  backdrop-filter: blur(10px);
 }
 
 /* Status badge styles */
 .badge {
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid currentColor;
 }
 
 .badge-waiting {
-  background: rgba(234, 179, 8, 0.2);
-  color: #facc15;
+  color: #fff;
+  border-color: #fff;
 }
 
 .badge-playing {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
+  color: #fff;
+  background: #222;
+  border-color: #fff;
 }
 
 .badge-finished {
-  background: rgba(100, 116, 139, 0.2);
-  color: #94a3b8;
+  color: #666;
+  border-color: #666;
 }
