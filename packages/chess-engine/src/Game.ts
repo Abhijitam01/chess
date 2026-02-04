@@ -17,12 +17,12 @@ export class Game {
     return this.board.turn();
   }
 
-  tryMove(move: MovePayload): boolean {
+  tryMove(move: MovePayload) {
     try {
-      this.board.move(move);
-      return true;
+      const result = this.board.move(move);
+      return result; // Returns the move object with san, from, to, etc.
     } catch {
-      return false;
+      return null;
     }
   }
 

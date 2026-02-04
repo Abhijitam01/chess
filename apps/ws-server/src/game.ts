@@ -49,19 +49,24 @@ export class Game {
       return;
     }
 
-    try {
-      this.engine.tryMove(move);
-    } catch (error) {
+    // Try to make the move and get the result
+    const moveResult = this.engine.tryMove(move);
+    
+    if (!moveResult) {
+      // Invalid move
       socket.send(JSON.stringify({
-        type :INVALID_MOVE,
-        payload : {
-          error : "Invalid Move , please try again",
-          move : move
+        type: INVALID_MOVE,
+        payload: {
+          error: "Invalid Move, please try again",
+          move: move
         }
       }));
       return;
     }
 
+    console.log("Move executed:", moveResult);
+
+    // Check if game is over
     if (this.engine.isGameOver()) {
       const winner = this.engine.getWinner();
       const gameOverMsg = JSON.stringify({
@@ -75,10 +80,15 @@ export class Game {
       return;
     }
 
-    // Notify both players of the move
+    // Notify both players of the move with complete information
     const moveMsg = JSON.stringify({
       type: MOVE,
-      payload: move,
+      payload: {
+        from: moveResult.from,
+        to: moveResult.to,
+        san: moveResult.san, // Include SAN notation for move history
+        promotion: moveResult.promotion
+      },
     });
 
     this.player1.send(moveMsg);

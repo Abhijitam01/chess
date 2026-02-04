@@ -1,15 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 export default function HomePage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col md:flex-row overflow-hidden font-sans">
@@ -69,7 +63,7 @@ export default function HomePage() {
 
             <div className="space-y-4">
                 <button
-                    onClick={() => router.push("/game/quick")}
+                    onClick={() => router.push("/game")}
                     className="w-full bg-white text-black text-xl font-bold py-6 rounded-lg uppercase tracking-widest hover:bg-neutral-200 transition-all transform hover:-translate-y-1 shadow-[0_4px_20px_rgba(255,255,255,0.2)] flex items-center justify-center gap-3 group"
                 >
                     <span>Play Online</span>

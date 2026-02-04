@@ -1,6 +1,6 @@
 "use client";
-import { useState } from 'react';
-import type { Chess, Square } from '@chess/chess-engine';
+import { useState, useEffect } from 'react';
+import type { Chess, Square, Move } from '@chess/chess-engine';
 
 interface ChessBoardProps {
     chess: Chess;
@@ -16,6 +16,7 @@ const PIECE_SYMBOLS: { [key: string]: string } = {
 export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardProps) {
     const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
     const [validMoves, setValidMoves] = useState<string[]>([]);
+    const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -23,157 +24,163 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
     const displayFiles = playerColor === 'black' ? [...files].reverse() : files;
     const displayRanks = playerColor === 'black' ? [...ranks].reverse() : ranks;
 
+    // Track last move from game history
+    useEffect(() => {
+        const history = chess.history({ verbose: true }) as Move[];
+        if (history.length > 0) {
+            const last = history[history.length - 1];
+            setLastMove({ from: last.from, to: last.to });
+        }
+    }, [chess]);
+
     const handleSquareClick = (square: string) => {
         if (!isMyTurn) return;
 
-        if (selectedSquare) {
-            const moved = onMove(selectedSquare, square);
-            setSelectedSquare(null);
-            setValidMoves([]);
-            
-            if (!moved && square !== selectedSquare) {
-                selectSquare(square);
-            }
-        } else {
-            selectSquare(square);
-        }
-    };
-
-    const selectSquare = (square: string) => {
         const piece = chess.get(square as Square);
-        
-        if (piece && 
-            ((playerColor === 'white' && piece.color === 'w') ||
-             (playerColor === 'black' && piece.color === 'b'))) {
+        const yourColor = playerColor === 'white' ? 'w' : 'b';
+
+        // Case 1: No piece selected - select if it's your piece
+        if (!selectedSquare && piece && piece.color === yourColor) {
             setSelectedSquare(square);
-            
             const moves = chess.moves({ square: square as Square, verbose: true });
             setValidMoves(moves.map(m => m.to));
+            return;
         }
+        
+        // Case 2: Click same square - deselect
+        if (selectedSquare === square) {
+            setSelectedSquare(null);
+            setValidMoves([]);
+            return;
+        }
+
+        // Case 3: Click another piece of yours - reselect
+        if (piece && piece.color === yourColor) {
+            setSelectedSquare(square);
+            const moves = chess.moves({ square: square as Square, verbose: true });
+            setValidMoves(moves.map(m => m.to));
+            return;
+        }
+        
+        // Case 4: Click valid move - make the move
+        if (validMoves.includes(square)) {
+            const success = onMove(selectedSquare as string, square);
+            if (success) {
+                setLastMove({ from: selectedSquare as string, to: square });
+                setSelectedSquare(null);
+                setValidMoves([]);
+            }
+            return;
+        }
+
+        // Case 5: Click invalid square - cancel selection
+        setSelectedSquare(null);
+        setValidMoves([]);
     };
 
     const isLightSquare = (fileIndex: number, rankIndex: number): boolean => {
         return (fileIndex + rankIndex) % 2 === 0;
     };
 
+    const getSquareClasses = (
+        square: string, 
+        isLight: boolean, 
+        piece: { color: string; type: string } | null
+    ): string => {
+        const isSelected = selectedSquare === square;
+        const isValidMove = validMoves.includes(square);
+        const isLastMoveSquare = lastMove && (lastMove.from === square || lastMove.to === square);
+        
+        let classes = 'aspect-square flex items-center justify-center cursor-pointer relative transition-all duration-150';
+        
+        // Base color
+        if (isSelected) {
+            classes += ' bg-[#c9a86c]'; // Warm gold for selection
+        } else if (isLastMoveSquare) {
+            classes += isLight 
+                ? ' bg-[#e2d0a8]' // Slightly warmer maple for last move
+                : ' bg-[#7a5c42]'; // Slightly lighter walnut for last move
+        } else {
+            classes += isLight 
+                ? ' bg-[#e8d4b8] hover:bg-[#f0dcc0]' // Maple
+                : ' bg-[#5c4033] hover:bg-[#6b4c3c]'; // Walnut
+        }
+        
+        // Valid move indicators
+        if (isValidMove && piece) {
+            classes += ' shadow-[inset_0_0_0_3px_rgba(139,115,85,0.6)]'; // Bronze ring for captures
+        }
+        
+        return classes;
+    };
+
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}>
-            <div style={{
-                display: 'grid',
-                gridTemplateRows: 'repeat(8, 1fr)',
-                width: '100%',
-                maxWidth: '600px',
-                aspectRatio: '1',
-                border: '6px solid #1e293b',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                background: '#0f172a'
-            }}>
-                {displayRanks.map((rank, rankIndex) => (
-                    <div key={rank} style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)' }}>
-                        {displayFiles.map((file, fileIndex) => {
-                            const square = `${file}${rank}`;
-                            const isLight = isLightSquare(fileIndex, rankIndex);
-                            const isSelected = selectedSquare === square;
-                            const isValidMove = validMoves.includes(square);
-                            const piece = chess.get(square as Square);
-                            
-                            // Determine square background
-                            let squareBackground = isLight 
-                                ? 'linear-gradient(135deg, #e2e8f0, #cbd5e1)' 
-                                : 'linear-gradient(135deg, #475569, #334155)';
-                            
-                            if (isSelected) {
-                                squareBackground = 'linear-gradient(135deg, #10b981, #059669)';
-                            }
+        <div className="flex justify-center items-center p-2">
+            {/* Board container with ambient shadow */}
+            <div className="w-full max-w-[560px] aspect-square rounded-[10px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.3)] border border-white/[0.06]">
+                <div className="grid grid-rows-8 w-full h-full">
+                    {displayRanks.map((rank, rankIndex) => (
+                        <div key={rank} className="grid grid-cols-8">
+                            {displayFiles.map((file, fileIndex) => {
+                                const square = `${file}${rank}`;
+                                const isLight = isLightSquare(fileIndex, rankIndex);
+                                const piece = chess.get(square as Square);
+                                const isValidMove = validMoves.includes(square);
 
-                            return (
-                                <div
-                                    key={square}
-                                    onClick={() => handleSquareClick(square)}
-                                    style={{
-                                        aspectRatio: '1',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        position: 'relative',
-                                        background: squareBackground,
-                                        boxShadow: isSelected ? 'inset 0 0 20px rgba(0,0,0,0.3)' : 
-                                                   isValidMove && piece ? 'inset 0 0 0 4px rgba(16, 185, 129, 0.6)' : 'none',
-                                        transition: 'all 0.15s ease',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        (e.target as HTMLElement).style.filter = 'brightness(1.1)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        (e.target as HTMLElement).style.filter = 'brightness(1)';
-                                    }}
-                                >
-                                    {/* Rank label (left side) */}
-                                    {fileIndex === 0 && (
-                                        <span style={{
-                                            position: 'absolute',
-                                            top: '2px',
-                                            left: '4px',
-                                            fontSize: '10px',
-                                            fontWeight: 'bold',
-                                            color: isLight ? '#475569' : '#94a3b8',
-                                            pointerEvents: 'none'
-                                        }}>
-                                            {rank}
-                                        </span>
-                                    )}
-                                    
-                                    {/* File label (bottom) */}
-                                    {rankIndex === 7 && (
-                                        <span style={{
-                                            position: 'absolute',
-                                            bottom: '2px',
-                                            right: '4px',
-                                            fontSize: '10px',
-                                            fontWeight: 'bold',
-                                            color: isLight ? '#475569' : '#94a3b8',
-                                            pointerEvents: 'none'
-                                        }}>
-                                            {file}
-                                        </span>
-                                    )}
+                                return (
+                                    <div
+                                        key={square}
+                                        onClick={() => handleSquareClick(square)}
+                                        className={getSquareClasses(square, isLight, piece)}
+                                    >
+                                        {/* Rank label (left side) */}
+                                        {fileIndex === 0 && (
+                                            <span className={`
+                                                absolute top-0.5 left-1 text-[9px] font-semibold pointer-events-none select-none
+                                                ${isLight ? 'text-[#5c4033]/60' : 'text-[#e8d4b8]/50'}
+                                            `}>
+                                                {rank}
+                                            </span>
+                                        )}
+                                        
+                                        {/* File label (bottom) */}
+                                        {rankIndex === 7 && (
+                                            <span className={`
+                                                absolute bottom-0.5 right-1 text-[9px] font-semibold pointer-events-none select-none
+                                                ${isLight ? 'text-[#5c4033]/60' : 'text-[#e8d4b8]/50'}
+                                            `}>
+                                                {file}
+                                            </span>
+                                        )}
 
-                                    {/* Valid move indicator (empty square) */}
-                                    {isValidMove && !piece && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            width: '30%',
-                                            height: '30%',
-                                            background: 'rgba(16, 185, 129, 0.6)',
-                                            borderRadius: '50%'
-                                        }} />
-                                    )}
+                                        {/* Valid move indicator - small muted dot for empty squares */}
+                                        {isValidMove && !piece && (
+                                            <div className="absolute w-[18%] h-[18%] bg-[#8b7355] rounded-full opacity-60" />
+                                        )}
 
-                                    {/* Chess piece */}
-                                    {piece && (
-                                        <div style={{
-                                            fontSize: 'clamp(24px, 8vw, 48px)',
-                                            lineHeight: 1,
-                                            userSelect: 'none',
-                                            pointerEvents: 'none',
-                                            color: piece.color === 'w' ? '#ffffff' : '#1e293b',
-                                            textShadow: piece.color === 'w' 
-                                                ? '0 4px 6px rgba(0, 0, 0, 0.5)' 
-                                                : '0 2px 4px rgba(255, 255, 255, 0.2)',
-                                            transform: isSelected ? 'scale(1.1)' : 'scale(1)',
-                                            transition: 'transform 0.2s ease'
-                                        }}>
-                                            {PIECE_SYMBOLS[piece.type.toLowerCase()]}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                ))}
+                                        {/* Chess piece */}
+                                        {piece && (
+                                            <div className={`
+                                                text-[clamp(24px,7vw,44px)] leading-none select-none pointer-events-none
+                                                transition-all duration-150 ease-out
+                                                ${piece.color === 'w' 
+                                                    ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]' 
+                                                    : 'text-[#1a1a1a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.12)]'
+                                                }
+                                                ${selectedSquare === square 
+                                                    ? 'scale-105 drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]' 
+                                                    : 'hover:scale-[1.02]'
+                                                }
+                                            `}>
+                                                {PIECE_SYMBOLS[piece.type.toLowerCase()]}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
