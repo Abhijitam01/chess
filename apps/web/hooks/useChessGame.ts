@@ -29,6 +29,8 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     turn: "w",
     winner: null,
   });
+  const [moveHistory, setMoveHistory] = useState<string[]>([]);
+
 
   useEffect(() => {
     if (!socket) return;
@@ -50,8 +52,8 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           setGameState((prev) => {
             const newChess = createChess();
             newChess.load(prev.chess.fen());
+            
             try {
-              // The payload might be an object {from, to} or a string
               const moveResult = typeof message.payload === 'string' 
                 ? newChess.move(message.payload)
                 : newChess.move({
@@ -65,17 +67,20 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
                 return prev;
               }
               
+              setMoveHistory(history => [...history, moveResult.san]);
+              
               return {
                 ...prev,
                 chess: newChess,
                 turn: newChess.turn(),
               };
             } catch (error) {
-              console.error("Invalid move received:", error);
+              console.error("Error applying move:", error);
               return prev;
             }
           });
           break;
+
 
         case "game_over":
           setGameState((prev) => ({
@@ -115,6 +120,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
         ...prev,
         turn: prev.chess.turn(),
       }));
+      setMoveHistory((prev) => [...prev, move.san]);
 
       if (socket && isConnected) {
         const message: ClientMessage = {
@@ -145,6 +151,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     ...gameState,
     makeMove,
     resetGame,
+    moveHistory,
     isMyTurn:
       gameState.playerColor !== null &&
       ((gameState.playerColor === "white" && gameState.turn === "w") ||
