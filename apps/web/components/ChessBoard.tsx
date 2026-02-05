@@ -96,33 +96,33 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
         const isValidMove = validMoves.includes(square);
         const isLastMoveSquare = lastMove && (lastMove.from === square || lastMove.to === square);
         
-        let classes = 'aspect-square flex items-center justify-center cursor-pointer relative transition-all duration-150';
+        let classes = 'aspect-square flex items-center justify-center cursor-pointer relative square-transition';
         
-        // Base color
+        // Base color - chess.com inspired colors
         if (isSelected) {
-            classes += ' bg-accent-gold'; // Warm gold for selection
+            classes += ' bg-[#f7ec5e]'; // Bright yellow for selection
         } else if (isLastMoveSquare) {
             classes += isLight 
-                ? ' bg-board-light-hover' // Slightly warmer maple for last move
-                : ' bg-board-dark-hover'; // Slightly lighter walnut for last move
+                ? ' bg-move-highlight-light' // Yellow tint for last move on light
+                : ' bg-move-highlight-dark'; // Yellow tint for last move on dark
         } else {
             classes += isLight 
-                ? ' bg-board-light hover:bg-board-light-hover' // Maple
-                : ' bg-board-dark hover:bg-board-dark-hover'; // Walnut
+                ? ' bg-board-light hover:bg-board-light-hover' // Light wood
+                : ' bg-board-dark hover:bg-board-dark-hover'; // Dark wood
         }
         
-        // Valid move indicators
+        // Valid move indicators - ring for captures
         if (isValidMove && piece) {
-            classes += ' shadow-[inset_0_0_0_3px_rgba(139,115,85,0.6)]'; // Bronze ring for captures
+            classes += ' shadow-[inset_0_0_0_3px_rgba(0,0,0,0.4)]'; // Dark ring for captures
         }
         
         return classes;
     };
 
     return (
-        <div className="flex justify-center items-center p-2">
-            {/* Board container with ambient shadow */}
-            <div className="w-full max-w-[560px] aspect-square rounded-board overflow-hidden shadow-ambient border border-white/[0.06]">
+        <div className="flex justify-center items-center w-full">
+            {/* Board container with premium shadow */}
+            <div className="w-full max-w-[640px] aspect-square rounded-[6px] overflow-hidden shadow-ambient border border-black/20">
                 <div className="grid grid-rows-8 w-full h-full">
                     {displayRanks.map((rank, rankIndex) => (
                         <div key={rank} className="grid grid-cols-8">
@@ -141,8 +141,8 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
                                         {/* Rank label (left side) */}
                                         {fileIndex === 0 && (
                                             <span className={`
-                                                absolute top-0.5 left-1 text-[9px] font-semibold pointer-events-none select-none
-                                                ${isLight ? 'text-board-dark/60' : 'text-board-light/50'}
+                                                absolute top-[3px] left-[5px] text-[11px] font-bold pointer-events-none select-none
+                                                ${isLight ? 'text-board-dark' : 'text-board-light'}
                                             `}>
                                                 {rank}
                                             </span>
@@ -151,30 +151,30 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
                                         {/* File label (bottom) */}
                                         {rankIndex === 7 && (
                                             <span className={`
-                                                absolute bottom-0.5 right-1 text-[9px] font-semibold pointer-events-none select-none
-                                                ${isLight ? 'text-board-dark/60' : 'text-board-light/50'}
+                                                absolute bottom-[2px] right-[5px] text-[11px] font-bold pointer-events-none select-none
+                                                ${isLight ? 'text-board-dark' : 'text-board-light'}
                                             `}>
                                                 {file}
                                             </span>
                                         )}
 
-                                        {/* Valid move indicator - small muted dot for empty squares */}
+                                        {/* Valid move indicator - centered dot for empty squares */}
                                         {isValidMove && !piece && (
-                                            <div className="absolute w-[18%] h-[18%] bg-accent-bronze rounded-full opacity-60" />
+                                            <div className="absolute w-[28%] h-[28%] bg-black/20 rounded-full" />
                                         )}
 
                                         {/* Chess piece */}
                                         {piece && (
                                             <div className={`
-                                                text-[clamp(24px,7vw,44px)] leading-none select-none pointer-events-none
-                                                transition-all duration-150 ease-out
+                                                text-[clamp(32px,8vw,52px)] leading-none select-none pointer-events-none
+                                                piece-transition
                                                 ${piece.color === 'w' 
-                                                    ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]' 
-                                                    : 'text-[#1a1a1a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.12)]'
+                                                    ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]' 
+                                                    : 'text-[#1a1a1a] drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]'
                                                 }
                                                 ${selectedSquare === square 
-                                                    ? 'scale-105 drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]' 
-                                                    : 'hover:scale-[1.02]'
+                                                    ? 'scale-110' 
+                                                    : 'hover:scale-105'
                                                 }
                                             `}>
                                                 {PIECE_SYMBOLS[piece.type.toLowerCase()]}

@@ -3,43 +3,67 @@
 
 /* ============================================
    Custom Theme Tokens (Tailwind v4)
+   Chess.com Inspired Premium Dark Theme
    ============================================ */
 
 @theme {
-  /* Background tones */
-  --color-background: #1a1a1a;
-  --color-background-elevated: #232323;
-  --color-background-card: rgba(35, 35, 35, 0.95);
+  /* Background tones - deeper and richer */
+  --color-background: #161512;
+  --color-background-elevated: #1e1c19;
+  --color-background-card: rgba(30, 28, 25, 0.98);
+  --color-background-sidebar: #1a1816;
+  --color-background-hover: rgba(255, 255, 255, 0.04);
   
-  /* Wood-inspired board colors */
-  --color-board-light: #e8d4b8;
-  --color-board-light-hover: #f0dcc0;
-  --color-board-dark: #5c4033;
-  --color-board-dark-hover: #6b4c3c;
+  /* Wood-inspired board colors - richer tones */
+  --color-board-light: #ecd9b9;
+  --color-board-light-hover: #f5e6cc;
+  --color-board-dark: #b58863;
+  --color-board-dark-hover: #c49a75;
   
-  /* Accent colors */
+  /* Move highlights */
+  --color-move-highlight-light: #f7ec5e;
+  --color-move-highlight-dark: #dac34a;
+  
+  /* Accent colors - chess.com green/gold inspired */
+  --color-accent-primary: #81b64c;
+  --color-accent-primary-hover: #9bc267;
   --color-accent-gold: #c9a86c;
   --color-accent-gold-soft: rgba(201, 168, 108, 0.25);
   --color-accent-bronze: #8b7355;
   --color-accent-bronze-ring: rgba(139, 115, 85, 0.6);
   --color-accent-slate: #6b7280;
+  --color-accent-danger: #e74c3c;
   
-  /* Text hierarchy */
-  --color-text-primary: #f5f5f4;
-  --color-text-secondary: #a8a29e;
-  --color-text-muted: #78716c;
-  --color-text-dim: #525252;
+  /* Text hierarchy - improved contrast */
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #b0b0a0;
+  --color-text-muted: #787868;
+  --color-text-dim: #4a4a40;
   
-  /* Custom shadows */
-  --shadow-ambient: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
-  --shadow-elevated: 0 4px 16px rgba(0,0,0,0.3);
+  /* Status colors */
+  --color-status-online: #81b64c;
+  --color-status-offline: #6b7280;
+  --color-status-warning: #f5a623;
+  
+  /* Custom shadows - premium depth */
+  --shadow-ambient: 0 10px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-button: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-button-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
   
   /* Custom border radius */
-  --radius-board: 10px;
+  --radius-board: 6px;
+  --radius-card: 12px;
+  --radius-button: 8px;
   
   /* Font families */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  
+  /* Spacing */
+  --spacing-panel: 360px;
+  --spacing-sidebar: 280px;
 }
 
 /* ============================================
@@ -77,29 +101,46 @@ html {
 }
 
 /* ============================================
+   Premium Background Gradient
+   ============================================ */
+
+.bg-premium-dark {
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(30, 28, 25, 0.8) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 100% at 50% 100%, rgba(22, 21, 18, 1) 0%, transparent 50%),
+    linear-gradient(180deg, #1a1816 0%, #161512 50%, #121110 100%);
+}
+
+.bg-subtle-texture {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.015;
+}
+
+/* ============================================
    Custom Scrollbar Styles
    ============================================ */
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(120, 113, 108, 0.4);
-  border-radius: 3px;
+  background: rgba(120, 120, 104, 0.4);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(120, 113, 108, 0.6);
+  background: rgba(120, 120, 104, 0.6);
 }
 
 /* Move history specific scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -107,8 +148,12 @@ html {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(120, 113, 108, 0.3);
-  border-radius: 2px;
+  background: rgba(120, 120, 104, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 104, 0.5);
 }
 
 /* ============================================
@@ -124,6 +169,174 @@ html {
   }
 }
 
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(129, 182, 76, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(129, 182, 76, 0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .animate-float {
   animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* ============================================
+   Button Styles
+   ============================================ */
+
+.btn-primary {
+  background: linear-gradient(180deg, #81b64c 0%, #6fa342 100%);
+  color: white;
+  font-weight: 600;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-button);
+  border: none;
+  box-shadow: var(--shadow-button);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #9bc267 0%, #81b64c 100%);
+  box-shadow: var(--shadow-button-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-button);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-secondary:active {
+  transform: translateY(1px);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-accent-danger);
+  font-weight: 600;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-button);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: rgba(231, 76, 60, 0.1);
+  border-color: rgba(231, 76, 60, 0.5);
+}
+
+/* ============================================
+   Card Styles
+   ============================================ */
+
+.card {
+  background: var(--color-background-card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+/* ============================================
+   Sidebar Styles
+   ============================================ */
+
+.sidebar {
+  background: var(--color-background-sidebar);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-item {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.sidebar-item:hover {
+  background: var(--color-background-hover);
+}
+
+.sidebar-item.active {
+  background: rgba(129, 182, 76, 0.1);
+  color: var(--color-accent-primary);
+}
+
+/* ============================================
+   Chess Board Square Transitions
+   ============================================ */
+
+.square-transition {
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.piece-transition {
+  transition: transform 0.15s ease, filter 0.15s ease;
 }

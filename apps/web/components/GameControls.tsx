@@ -22,145 +22,146 @@ export function GameControls({
     onResign
 }: GameControlsProps) {
     
-    const getBadgeClasses = (): string => {
-        const baseClasses = "px-2.5 py-1 rounded text-[0.6875rem] font-semibold uppercase tracking-wider";
+    const getStatusBadge = () => {
+        const baseClasses = "px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider";
         
         if (status === 'waiting') {
-            return `${baseClasses} bg-accent-gold/[0.12] text-accent-gold`;
+            return (
+                <span className={`${baseClasses} bg-status-warning/20 text-status-warning`}>
+                    Waiting
+                </span>
+            );
         } else if (status === 'playing') {
-            return `${baseClasses} bg-text-secondary/[0.12] text-text-secondary`;
+            return (
+                <span className={`${baseClasses} bg-accent-primary/20 text-accent-primary animate-pulse-glow`}>
+                    Live
+                </span>
+            );
         }
-        return `${baseClasses} bg-text-muted/[0.12] text-text-muted`;
+        return (
+            <span className={`${baseClasses} bg-text-muted/20 text-text-muted`}>
+                Ended
+            </span>
+        );
     };
 
     return (
-        <div className="bg-background-card border border-white/[0.08] p-5 rounded-xl flex flex-col gap-5 w-full max-w-[360px] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+        <div className="card flex flex-col gap-4 w-full">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.05]">
-                <h2 className="text-[0.9375rem] font-semibold text-text-primary tracking-[0.01em]">
+            <div className="card-header flex items-center justify-between">
+                <h2 className="text-base font-bold text-text-primary">
                     Game Status
                 </h2>
-                <div className={getBadgeClasses()}>
-                    {status === 'waiting' && 'Waiting'}
-                    {status === 'playing' && 'In Game'}
-                    {status === 'finished' && 'Ended'}
-                </div>
+                {getStatusBadge()}
             </div>
 
-            {/* Status Box */}
-            <div className="bg-black/25 p-4 rounded-lg text-center border border-white/[0.03]">
-                <div className="text-sm font-medium text-text-secondary">
-                    {status === 'waiting' && "Waiting for opponent..."}
-                    {status === 'playing' && (!isMyTurn ? "Opponent's turn" : "Your turn")}
-                    {status === 'finished' && "Game complete"}
+            <div className="card-body flex flex-col gap-4">
+                {/* Status Message */}
+                <div className="bg-background/60 p-4 rounded-lg text-center border border-white/[0.04]">
+                    <div className="text-sm font-medium text-text-secondary">
+                        {status === 'waiting' && "Finding an opponent..."}
+                        {status === 'playing' && (isMyTurn ? "Your turn to move" : "Waiting for opponent")}
+                        {status === 'finished' && "Game complete"}
+                    </div>
                 </div>
-            </div>
 
-            {/* Player Color Badge */}
-            {playerColor && (
-                <div className="flex items-center gap-3 bg-black/25 p-3.5 rounded-lg border border-white/[0.03]">
+                {/* Player Cards */}
+                <div className="flex flex-col gap-2">
+                    {/* Black Player */}
                     <div className={`
-                        w-9 h-9 rounded-full flex items-center justify-center text-lg shadow-[0_2px_4px_rgba(0,0,0,0.2)]
-                        ${playerColor === 'white' 
-                            ? 'bg-text-primary text-[#1a1a1a]' 
-                            : 'bg-[#1a1a1a] text-text-primary border border-white/20'
+                        flex items-center gap-3 p-3 rounded-lg transition-all duration-200
+                        ${turn === 'b' && status === 'playing' 
+                            ? 'bg-accent-primary/10 border border-accent-primary/30' 
+                            : 'bg-background/40 border border-transparent'
                         }
                     `}>
-                        {playerColor === 'white' ? '♔' : '♚'}
-                    </div>
-                    <div>
-                        <div className="text-[0.6875rem] text-text-muted uppercase tracking-widest">Playing as</div>
-                        <div className="text-sm font-semibold text-text-primary capitalize">
-                            {playerColor}
+                        <div className="w-10 h-10 rounded-full bg-[#1a1a1a] flex items-center justify-center text-xl border border-white/20 shadow-md">
+                            ♚
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Turn Indicators */}
-            {status === 'playing' && (
-                <div className="grid grid-cols-2 gap-2.5">
-                    <div className={`
-                        p-2.5 rounded-lg flex flex-col items-center gap-1 transition-all duration-150
-                        ${turn === 'w' 
-                            ? 'border border-accent-gold/40 bg-accent-gold/[0.08]' 
-                            : 'border border-white/[0.05] bg-black/20 opacity-50'
-                        }
-                    `}>
-                        <span className="text-xl">♔</span>
-                        <span className={`text-[0.6875rem] font-semibold ${turn === 'w' ? 'text-accent-gold' : 'text-text-dim'}`}>
-                            White
-                        </span>
-                    </div>
-                    <div className={`
-                        p-2.5 rounded-lg flex flex-col items-center gap-1 transition-all duration-150
-                        ${turn === 'b' 
-                            ? 'border border-accent-gold/40 bg-accent-gold/[0.08]' 
-                            : 'border border-white/[0.05] bg-black/20 opacity-50'
-                        }
-                    `}>
-                        <span className="text-xl">♚</span>
-                        <span className={`text-[0.6875rem] font-semibold ${turn === 'b' ? 'text-accent-gold' : 'text-text-dim'}`}>
-                            Black
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="mt-1">
-                {status === 'waiting' && (
-                    <button 
-                        className={`
-                            w-full bg-gradient-to-b from-[#4a4a4a] to-[#3a3a3a] text-text-primary font-semibold
-                            py-3.5 px-6 rounded-lg border border-white/10 text-[0.9375rem] tracking-[0.01em]
-                            shadow-[0_2px_8px_rgba(0,0,0,0.3)] transition-all duration-150
-                            hover:from-[#555555] hover:to-[#444444] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)]
-                            active:translate-y-px active:shadow-[0_1px_4px_rgba(0,0,0,0.3)]
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                        `}
-                        onClick={onStartGame}
-                        disabled={!isConnected}
-                    >
-                        Start Game
-                    </button>
-                )}
-
-                {status === 'playing' && (
-                    <button 
-                        className="
-                            w-full bg-transparent text-text-secondary font-semibold py-3.5 px-6 rounded-lg
-                            border border-white/[0.08] text-[0.9375rem] transition-all duration-150
-                            hover:border-white/15 hover:text-text-primary hover:bg-white/[0.03]
-                            active:translate-y-px
-                        "
-                        onClick={onResign}
-                    >
-                        Resign
-                    </button>
-                )}
-
-                {status === 'finished' && (
-                    <div className="flex flex-col gap-2.5">
-                        <div className="text-center p-5 bg-black/30 rounded-lg border border-accent-gold/20">
-                            <div className="text-3xl mb-1.5">♔</div>
-                            <h3 className="text-base font-semibold text-accent-gold capitalize tracking-[0.01em]">
-                                {winner} wins
-                            </h3>
+                        <div className="flex-1">
+                            <div className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                                Black
+                                {playerColor === 'black' && (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-accent-primary/20 text-accent-primary rounded font-bold">
+                                        YOU
+                                    </span>
+                                )}
+                            </div>
+                            <div className="text-xs text-text-muted">Player</div>
                         </div>
+                        {turn === 'b' && status === 'playing' && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-accent-primary animate-pulse" />
+                        )}
+                    </div>
+
+                    {/* White Player */}
+                    <div className={`
+                        flex items-center gap-3 p-3 rounded-lg transition-all duration-200
+                        ${turn === 'w' && status === 'playing' 
+                            ? 'bg-accent-primary/10 border border-accent-primary/30' 
+                            : 'bg-background/40 border border-transparent'
+                        }
+                    `}>
+                        <div className="w-10 h-10 rounded-full bg-text-primary flex items-center justify-center text-xl text-[#1a1a1a] shadow-md">
+                            ♔
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                                White
+                                {playerColor === 'white' && (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-accent-primary/20 text-accent-primary rounded font-bold">
+                                        YOU
+                                    </span>
+                                )}
+                            </div>
+                            <div className="text-xs text-text-muted">Player</div>
+                        </div>
+                        {turn === 'w' && status === 'playing' && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-accent-primary animate-pulse" />
+                        )}
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="mt-2">
+                    {status === 'waiting' && (
                         <button 
-                            className="
-                                w-full bg-transparent text-text-secondary font-semibold py-3.5 px-6 rounded-lg
-                                border border-white/[0.08] text-[0.9375rem] transition-all duration-150
-                                hover:border-white/15 hover:text-text-primary hover:bg-white/[0.03]
-                                active:translate-y-px
-                            "
-                            onClick={() => window.location.reload()}
+                            className="btn-primary w-full text-sm"
+                            onClick={onStartGame}
+                            disabled={!isConnected}
                         >
-                            Play Again
+                            {isConnected ? 'Find Opponent' : 'Connecting...'}
                         </button>
-                    </div>
-                )}
+                    )}
+
+                    {status === 'playing' && (
+                        <button 
+                            className="btn-danger w-full text-sm"
+                            onClick={onResign}
+                        >
+                            Resign Game
+                        </button>
+                    )}
+
+                    {status === 'finished' && (
+                        <div className="flex flex-col gap-3">
+                            <div className="text-center p-4 bg-background/60 rounded-lg border border-accent-gold/20">
+                                <div className="text-3xl mb-2">
+                                    {winner === 'white' ? '♔' : '♚'}
+                                </div>
+                                <h3 className="text-lg font-bold text-accent-gold capitalize">
+                                    {winner} wins!
+                                </h3>
+                            </div>
+                            <button 
+                                className="btn-primary w-full text-sm"
+                                onClick={() => window.location.reload()}
+                            >
+                                Play Again
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
