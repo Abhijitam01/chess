@@ -30,24 +30,18 @@ export default function Game() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#1a1a1a]">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Subtle vignette background */}
       <div 
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse at 50% 50%, #1e1e1e 0%, #161616 50%, #0f0f0f 100%)'
-        }}
+        className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_50%_50%,#1e1e1e_0%,#161616_50%,#0f0f0f_100%)]"
       />
       {/* Very subtle warm accent */}
       <div 
-        className="fixed inset-0 pointer-events-none opacity-30"
-        style={{
-          background: 'radial-gradient(circle at 30% 40%, rgba(201, 168, 108, 0.03) 0%, transparent 50%)'
-        }}
+        className="fixed inset-0 pointer-events-none opacity-30 bg-[radial-gradient(circle_at_30%_40%,rgba(201,168,108,0.03)_0%,transparent_50%)]"
       />
       
       {/* Navigation */}
-      <nav className="relative z-10 border-b border-white/[0.06] bg-[#1a1a1a]/90 backdrop-blur-sm">
+      <nav className="relative z-10 border-b border-white/[0.06] bg-background/90 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -55,8 +49,8 @@ export default function Game() {
               onClick={() => router.push("/")}
               className="flex items-center gap-3 group transition-opacity hover:opacity-80"
             >
-              <span className="text-3xl text-[#c9a86c]">♔</span>
-              <span className="text-xl font-semibold text-[#f5f5f4] tracking-tight">
+              <span className="text-3xl text-accent-gold">♔</span>
+              <span className="text-xl font-semibold text-text-primary tracking-tight">
                 Chess
               </span>
             </button>
@@ -64,7 +58,7 @@ export default function Game() {
             {/* Connection indicator */}
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#6b8e6b]' : 'bg-[#8e6b6b]'}`} />
-              <span className="text-xs text-[#78716c] font-medium">
+              <span className="text-xs text-text-muted font-medium">
                 {isConnected ? 'Connected' : 'Connecting...'}
               </span>
             </div>
@@ -100,19 +94,12 @@ export default function Game() {
             />
 
             {/* Move History */}
-            <div 
-              className="rounded-xl p-5 flex flex-col max-h-[400px]"
-              style={{
-                background: 'rgba(35, 35, 35, 0.95)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)'
-              }}
-            >
+            <div className="rounded-xl p-5 flex flex-col max-h-[400px] bg-background-card border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
               {/* Header */}
               <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.05]">
-                <h3 className="text-sm font-semibold text-[#f5f5f4] tracking-wide">Moves</h3>
+                <h3 className="text-sm font-semibold text-text-primary tracking-wide">Moves</h3>
                 {moveHistory && moveHistory.length > 0 && (
-                  <span className="text-[10px] font-medium text-[#78716c] bg-white/[0.05] px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-medium text-text-muted bg-white/[0.05] px-2 py-0.5 rounded">
                     {Math.ceil(moveHistory.length / 2)}
                   </span>
                 )}
@@ -127,7 +114,7 @@ export default function Game() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/[0.05] py-4">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-[#525252] text-xs font-medium">
+          <p className="text-text-dim text-xs font-medium">
             Chess • 2026
           </p>
         </div>

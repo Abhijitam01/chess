@@ -1,7 +1,12 @@
 "use client";
 import { useState, useEffect } from 'react';
-import type { Chess, Square, Move } from '@chess/chess-engine';
+import type { Chess, Square } from '@chess/chess-engine';
 
+// Move type from chess.js - only the fields we use
+interface Move {
+    from: string;
+    to: string;
+}
 interface ChessBoardProps {
     chess: Chess;
     playerColor: 'white' | 'black' | null;
@@ -28,7 +33,7 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
     useEffect(() => {
         const history = chess.history({ verbose: true }) as Move[];
         if (history.length > 0) {
-            const last = history[history.length - 1];
+            const last = history[history.length - 1]!;
             setLastMove({ from: last.from, to: last.to });
         }
     }, [chess]);
@@ -85,7 +90,7 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
     const getSquareClasses = (
         square: string, 
         isLight: boolean, 
-        piece: { color: string; type: string } | null
+        piece: { color: string; type: string } | null | undefined
     ): string => {
         const isSelected = selectedSquare === square;
         const isValidMove = validMoves.includes(square);
@@ -95,15 +100,15 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
         
         // Base color
         if (isSelected) {
-            classes += ' bg-[#c9a86c]'; // Warm gold for selection
+            classes += ' bg-accent-gold'; // Warm gold for selection
         } else if (isLastMoveSquare) {
             classes += isLight 
-                ? ' bg-[#e2d0a8]' // Slightly warmer maple for last move
-                : ' bg-[#7a5c42]'; // Slightly lighter walnut for last move
+                ? ' bg-board-light-hover' // Slightly warmer maple for last move
+                : ' bg-board-dark-hover'; // Slightly lighter walnut for last move
         } else {
             classes += isLight 
-                ? ' bg-[#e8d4b8] hover:bg-[#f0dcc0]' // Maple
-                : ' bg-[#5c4033] hover:bg-[#6b4c3c]'; // Walnut
+                ? ' bg-board-light hover:bg-board-light-hover' // Maple
+                : ' bg-board-dark hover:bg-board-dark-hover'; // Walnut
         }
         
         // Valid move indicators
@@ -117,7 +122,7 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
     return (
         <div className="flex justify-center items-center p-2">
             {/* Board container with ambient shadow */}
-            <div className="w-full max-w-[560px] aspect-square rounded-[10px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.3)] border border-white/[0.06]">
+            <div className="w-full max-w-[560px] aspect-square rounded-board overflow-hidden shadow-ambient border border-white/[0.06]">
                 <div className="grid grid-rows-8 w-full h-full">
                     {displayRanks.map((rank, rankIndex) => (
                         <div key={rank} className="grid grid-cols-8">
@@ -137,7 +142,7 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
                                         {fileIndex === 0 && (
                                             <span className={`
                                                 absolute top-0.5 left-1 text-[9px] font-semibold pointer-events-none select-none
-                                                ${isLight ? 'text-[#5c4033]/60' : 'text-[#e8d4b8]/50'}
+                                                ${isLight ? 'text-board-dark/60' : 'text-board-light/50'}
                                             `}>
                                                 {rank}
                                             </span>
@@ -147,7 +152,7 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
                                         {rankIndex === 7 && (
                                             <span className={`
                                                 absolute bottom-0.5 right-1 text-[9px] font-semibold pointer-events-none select-none
-                                                ${isLight ? 'text-[#5c4033]/60' : 'text-[#e8d4b8]/50'}
+                                                ${isLight ? 'text-board-dark/60' : 'text-board-light/50'}
                                             `}>
                                                 {file}
                                             </span>
@@ -155,7 +160,7 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
 
                                         {/* Valid move indicator - small muted dot for empty squares */}
                                         {isValidMove && !piece && (
-                                            <div className="absolute w-[18%] h-[18%] bg-[#8b7355] rounded-full opacity-60" />
+                                            <div className="absolute w-[18%] h-[18%] bg-accent-bronze rounded-full opacity-60" />
                                         )}
 
                                         {/* Chess piece */}

@@ -83,27 +83,41 @@ export function ChessBoard({
     return (fileIndex + rankIndex) % 2 === 0;
   };
 
+  const getSquareClasses = (
+    square: string,
+    isLight: boolean,
+    isSelected: boolean,
+    isValidMove: boolean,
+    piece: Piece | null | undefined
+  ): string => {
+    let classes = "aspect-square flex items-center justify-center cursor-pointer relative transition-colors duration-150";
+    
+    // Base color with hover
+    if (isSelected) {
+      classes += " bg-accent-gold shadow-[inset_0_0_12px_rgba(0,0,0,0.2)]";
+    } else if (isLight) {
+      classes += " bg-board-light hover:bg-board-light-hover";
+    } else {
+      classes += " bg-board-dark hover:bg-board-dark-hover";
+    }
+    
+    // Valid capture indicator
+    if (isValidMove && piece) {
+      classes += " shadow-[inset_0_0_0_3px_rgba(139,115,85,0.6)]";
+    }
+    
+    return classes;
+  };
+
   return (
     <div className="flex justify-center items-center w-full min-h-[500px] p-4 md:p-8">
-      {/* Use inline styles for critical layout to prevent stacking issues if Tailwind fails */}
       <div 
-        className="chess-board w-full max-w-2xl shadow-2xl rounded-sm overflow-hidden border-4 border-neutral-800"
-        style={{
-          display: 'grid',
-          gridTemplateRows: 'repeat(8, 1fr)',
-          aspectRatio: '1/1'
-        }}
+        className="w-full max-w-2xl shadow-ambient rounded-board overflow-hidden border-4 border-neutral-800 grid grid-rows-8 aspect-square"
       >
         {displayRanks.map((rank, rankIndex) => (
           <div 
             key={rank} 
-            className="chess-row"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(8, 1fr)',
-              width: '100%',
-              height: '100%'
-            }}
+            className="grid grid-cols-8 w-full h-full"
           >
             {displayFiles.map((file, fileIndex) => {
               const square = `${file}${rank}` as Square;
@@ -112,17 +126,10 @@ export function ChessBoard({
               const isValidMove = validMoves.includes(square);
               const piece = chess.get(square);
 
-              // Use styles defined in globals.css via these classes
               return (
                 <div
                   key={square}
-                  className={`
-                    chess-square
-                    ${isLight ? "light" : "dark"}
-                    ${isSelected ? "selected" : ""}
-                    ${isValidMove ? "valid-move" : ""}
-                    ${isValidMove && piece ? "valid-capture" : ""}
-                  `}
+                  className={getSquareClasses(square, isLight, isSelected, isValidMove, piece)}
                   onClick={() => handleSquareClick(square)}
                 >
                   {/* Coordinates */}
@@ -145,9 +152,23 @@ export function ChessBoard({
                     </span>
                   )}
 
+                  {/* Valid move indicator dot */}
+                  {isValidMove && !piece && (
+                    <div className="absolute w-[20%] h-[20%] bg-accent-bronze rounded-full opacity-70" />
+                  )}
+
+                  {/* Chess piece */}
                   {piece && (
                     <div
-                      className={`chess-piece ${piece.color === "w" ? "white" : "black"}`}
+                      className={`
+                        text-[clamp(1.5rem,8vw,3rem)] leading-none select-none pointer-events-none
+                        transition-transform duration-150
+                        ${piece.color === "w" 
+                          ? "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" 
+                          : "text-[#1a1a1a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.15)]"
+                        }
+                        ${isSelected ? "scale-105 drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]" : ""}
+                      `}
                     >
                       {PIECE_SYMBOLS[piece.type.toLowerCase()]}
                     </div>
