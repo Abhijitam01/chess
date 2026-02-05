@@ -34,7 +34,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                     )}
                     <button
                         onClick={onToggle}
-                        className="p-2 rounded-lg hover:bg-white/[0.05] transition-colors text-text-muted hover:text-text-primary"
+                        className="p-2 rounded-lg hover:bg-white/[0.05] transition-colors text-text-muted hover:text-text-primary min-w-[44px] min-h-[44px] flex items-center justify-center"
                         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
                         <svg 
@@ -54,7 +54,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         {/* Board Theme Section */}
                         <div className="card">
                             <button 
-                                className={`sidebar-item w-full text-left flex items-center gap-3 ${activeSection === 'theme' ? 'active' : ''}`}
+                                className={`sidebar-item w-full text-left flex items-center gap-3 min-h-[44px] ${activeSection === 'theme' ? 'active' : ''}`}
                                 onClick={() => setActiveSection('theme')}
                             >
                                 <span className="text-lg">🎨</span>
@@ -68,13 +68,13 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         {/* Piece Style Section */}
                         <div className="card">
                             <button 
-                                className={`sidebar-item w-full text-left flex items-center gap-3 ${activeSection === 'pieces' ? 'active' : ''}`}
+                                className={`sidebar-item w-full text-left flex items-center gap-3 min-h-[44px] ${activeSection === 'pieces' ? 'active' : ''}`}
                                 onClick={() => setActiveSection('pieces')}
                             >
                                 <span className="text-lg">♞</span>
                                 <div className="flex-1">
                                     <div className="text-sm font-medium text-text-primary">Piece Style</div>
-                                    <div className="text-xs text-text-muted">Standard</div>
+                                    <div className="text-xs text-text-muted">Standard SVG</div>
                                 </div>
                             </button>
                         </div>
@@ -82,7 +82,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         {/* Sound Section */}
                         <div className="card">
                             <button 
-                                className={`sidebar-item w-full text-left flex items-center gap-3 ${activeSection === 'sound' ? 'active' : ''}`}
+                                className={`sidebar-item w-full text-left flex items-center gap-3 min-h-[44px] ${activeSection === 'sound' ? 'active' : ''}`}
                                 onClick={() => setActiveSection('sound')}
                             >
                                 <span className="text-lg">🔊</span>
@@ -96,7 +96,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         {/* Coordinates Section */}
                         <div className="card">
                             <button 
-                                className={`sidebar-item w-full text-left flex items-center gap-3 ${activeSection === 'coords' ? 'active' : ''}`}
+                                className={`sidebar-item w-full text-left flex items-center gap-3 min-h-[44px] ${activeSection === 'coords' ? 'active' : ''}`}
                                 onClick={() => setActiveSection('coords')}
                             >
                                 <span className="text-lg font-mono text-sm">a1</span>
@@ -110,7 +110,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         {/* Animation Section */}
                         <div className="card">
                             <button 
-                                className={`sidebar-item w-full text-left flex items-center gap-3 ${activeSection === 'animation' ? 'active' : ''}`}
+                                className={`sidebar-item w-full text-left flex items-center gap-3 min-h-[44px] ${activeSection === 'animation' ? 'active' : ''}`}
                                 onClick={() => setActiveSection('animation')}
                             >
                                 <span className="text-lg">✨</span>
@@ -126,19 +126,19 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 {/* Collapsed Icons */}
                 {isCollapsed && (
                     <div className="flex-1 flex flex-col items-center py-4 space-y-3 animate-fade-in">
-                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors" title="Board Theme">
+                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Board Theme">
                             <span className="text-lg">🎨</span>
                         </button>
-                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors" title="Piece Style">
+                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Piece Style">
                             <span className="text-lg">♞</span>
                         </button>
-                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors" title="Sound">
+                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Sound">
                             <span className="text-lg">🔊</span>
                         </button>
-                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors" title="Coordinates">
+                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Coordinates">
                             <span className="text-sm font-mono">a1</span>
                         </button>
-                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors" title="Animations">
+                        <button className="p-3 rounded-lg hover:bg-white/[0.05] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Animations">
                             <span className="text-lg">✨</span>
                         </button>
                     </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import type { Chess, Square } from '@chess/chess-engine';
+import { ChessPiece } from './ChessPiece';
 
 // Move type from chess.js - only the fields we use
 interface Move {
@@ -13,10 +14,6 @@ interface ChessBoardProps {
     isMyTurn: boolean;
     onMove: (from: string, to: string) => boolean;
 }
-
-const PIECE_SYMBOLS: { [key: string]: string } = {
-    'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚',
-};
 
 export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardProps) {
     const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
@@ -87,103 +84,96 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
         return (fileIndex + rankIndex) % 2 === 0;
     };
 
-    const getSquareClasses = (
-        square: string, 
-        isLight: boolean, 
-        piece: { color: string; type: string } | null | undefined
-    ): string => {
-        const isSelected = selectedSquare === square;
-        const isValidMove = validMoves.includes(square);
-        const isLastMoveSquare = lastMove && (lastMove.from === square || lastMove.to === square);
-        
-        let classes = 'aspect-square flex items-center justify-center cursor-pointer relative square-transition';
-        
-        // Base color - chess.com inspired colors
-        if (isSelected) {
-            classes += ' bg-[#f7ec5e]'; // Bright yellow for selection
-        } else if (isLastMoveSquare) {
-            classes += isLight 
-                ? ' bg-move-highlight-light' // Yellow tint for last move on light
-                : ' bg-move-highlight-dark'; // Yellow tint for last move on dark
-        } else {
-            classes += isLight 
-                ? ' bg-board-light hover:bg-board-light-hover' // Light wood
-                : ' bg-board-dark hover:bg-board-dark-hover'; // Dark wood
-        }
-        
-        // Valid move indicators - ring for captures
-        if (isValidMove && piece) {
-            classes += ' shadow-[inset_0_0_0_3px_rgba(0,0,0,0.4)]'; // Dark ring for captures
-        }
-        
-        return classes;
+
+    // Safe hex colors for board - fallback if variables fail
+    const colors = {
+        light: '#eeeed2',
+        dark: '#769656',
+        lightHover: '#f5f5e6',
+        darkHover: '#86a666',
+        selected: '#f7ec5e',
+        moveLight: 'rgba(247, 236, 94, 0.8)',
+        moveDark: 'rgba(247, 236, 94, 0.6)'
     };
 
     return (
-        <div className="flex justify-center items-center w-full">
-            {/* Board container with premium shadow */}
-            <div className="w-full max-w-[640px] aspect-square rounded-[6px] overflow-hidden shadow-ambient border border-black/20">
-                <div className="grid grid-rows-8 w-full h-full">
+        <div className="flex justify-center items-center w-full h-full">
+            {/* Board container with explicit centering and sizing */}
+            <div className="
+                w-full h-full
+                aspect-square 
+                bg-[#2c2c2c]
+                border-4 border-[#3c3c3c]
+                rounded-sm
+                shadow-2xl
+                relative
+                flex items-center justify-center
+            ">
+                <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
                     {displayRanks.map((rank, rankIndex) => (
-                        <div key={rank} className="grid grid-cols-8">
-                            {displayFiles.map((file, fileIndex) => {
-                                const square = `${file}${rank}`;
-                                const isLight = isLightSquare(fileIndex, rankIndex);
-                                const piece = chess.get(square as Square);
-                                const isValidMove = validMoves.includes(square);
+                        displayFiles.map((file, fileIndex) => {
+                            const square = `${file}${rank}`;
+                            const isLight = isLightSquare(fileIndex, rankIndex);
+                            const piece = chess.get(square as Square);
+                            const isValidMove = validMoves.includes(square);
+                            const isSelected = selectedSquare === square;
+                            const isLastMoveSquare = lastMove && (lastMove.from === square || lastMove.to === square);
 
-                                return (
-                                    <div
-                                        key={square}
-                                        onClick={() => handleSquareClick(square)}
-                                        className={getSquareClasses(square, isLight, piece)}
-                                    >
-                                        {/* Rank label (left side) */}
-                                        {fileIndex === 0 && (
-                                            <span className={`
-                                                absolute top-[3px] left-[5px] text-[11px] font-bold pointer-events-none select-none
-                                                ${isLight ? 'text-board-dark' : 'text-board-light'}
-                                            `}>
-                                                {rank}
-                                            </span>
-                                        )}
-                                        
-                                        {/* File label (bottom) */}
-                                        {rankIndex === 7 && (
-                                            <span className={`
-                                                absolute bottom-[2px] right-[5px] text-[11px] font-bold pointer-events-none select-none
-                                                ${isLight ? 'text-board-dark' : 'text-board-light'}
-                                            `}>
-                                                {file}
-                                            </span>
-                                        )}
+                            // Inline styles for absolute color safety
+                            const bgStyle = isSelected 
+                                ? colors.selected
+                                : isLastMoveSquare 
+                                    ? (isLight ? colors.moveLight : colors.moveDark)
+                                    : (isLight ? colors.light : colors.dark);
 
-                                        {/* Valid move indicator - centered dot for empty squares */}
-                                        {isValidMove && !piece && (
-                                            <div className="absolute w-[28%] h-[28%] bg-black/20 rounded-full" />
-                                        )}
+                            return (
+                                <div
+                                    key={square}
+                                    onClick={() => handleSquareClick(square)}
+                                    className={`
+                                        relative w-full h-full flex items-center justify-center cursor-pointer
+                                        ${isValidMove && piece ? 'shadow-[inset_0_0_0_4px_rgba(0,0,0,0.2)]' : ''}
+                                    `}
+                                    style={{ backgroundColor: bgStyle }}
+                                >
+                                    {/* Rank label (left side) */}
+                                    {fileIndex === 0 && (
+                                        <span className={`
+                                            absolute top-0.5 left-1 text-[10px] font-bold pointer-events-none select-none z-10
+                                            ${isLight ? 'text-[#769656]' : 'text-[#eeeed2]'}
+                                        `}>
+                                            {rank}
+                                        </span>
+                                    )}
+                                    
+                                    {/* File label (bottom) */}
+                                    {rankIndex === 7 && (
+                                        <span className={`
+                                            absolute bottom-0.5 right-1 text-[10px] font-bold pointer-events-none select-none z-10
+                                            ${isLight ? 'text-[#769656]' : 'text-[#eeeed2]'}
+                                        `}>
+                                            {file}
+                                        </span>
+                                    )}
 
-                                        {/* Chess piece */}
-                                        {piece && (
-                                            <div className={`
-                                                text-[clamp(32px,8vw,52px)] leading-none select-none pointer-events-none
-                                                piece-transition
-                                                ${piece.color === 'w' 
-                                                    ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]' 
-                                                    : 'text-[#1a1a1a] drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]'
-                                                }
-                                                ${selectedSquare === square 
-                                                    ? 'scale-110' 
-                                                    : 'hover:scale-105'
-                                                }
-                                            `}>
-                                                {PIECE_SYMBOLS[piece.type.toLowerCase()]}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    {/* Valid move indicator */}
+                                    {isValidMove && !piece && (
+                                        <div className="absolute w-3 h-3 bg-black/20 rounded-full z-10" />
+                                    )}
+
+                                    {/* Chess piece */}
+                                    {piece && (
+                                        <div className="relative z-20 w-[90%] h-[90%] flex items-center justify-center">
+                                            <ChessPiece 
+                                                type={piece.type as 'k' | 'q' | 'r' | 'b' | 'n' | 'p'}
+                                                color={piece.color}
+                                                isSelected={selectedSquare === square}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
                     ))}
                 </div>
             </div>

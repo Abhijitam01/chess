@@ -112,7 +112,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           setGameState((prev) => ({
             ...prev,
             status: "finished",
-            winner: prev.playerColor === "white" ? "black" : "white",
+            winner: prev.playerColor,
           }));
           alert(message.payload.message);
           break;

@@ -27,35 +27,25 @@ export default function Game() {
   } = useChessGame(socket, isConnected);
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [moveHistoryExpanded, setMoveHistoryExpanded] = useState(false);
 
   const handleStartGame = () => {
     sendMessage({ type: INIT_GAME });
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Premium gradient background */}
-      <div className="fixed inset-0 bg-premium-dark pointer-events-none" />
-      
-      {/* Subtle texture overlay */}
-      <div className="fixed inset-0 bg-subtle-texture pointer-events-none" />
-      
-      {/* Ambient glow effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent-gold/5 rounded-full blur-3xl" />
-      </div>
-      
-      {/* Navigation */}
-      <nav className="relative z-20 border-b border-white/[0.06] bg-background-elevated/80 backdrop-blur-md">
-        <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-3">
-          <div className="flex items-center justify-between">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Navigation - Fixed Height */}
+      <nav className="h-16 relative z-20 border-b border-white/[0.06] bg-background-elevated/80 backdrop-blur-md flex-shrink-0">
+        <div className="max-w-[1920px] mx-auto px-4 lg:px-6 h-full flex items-center">
+          <div className="flex items-center justify-between w-full">
             {/* Left: Menu + Logo */}
             <div className="flex items-center gap-4">
               {/* Mobile menu toggle */}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="lg:hidden p-2 rounded-lg hover:bg-white/[0.05] transition-colors text-text-muted hover:text-text-primary"
+                className="lg:hidden p-2 rounded-lg hover:bg-white/[0.05] transition-colors text-text-muted hover:text-text-primary min-w-[44px] min-h-[44px]"
+                aria-label="Toggle menu"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -67,7 +57,7 @@ export default function Game() {
                 onClick={() => router.push("/")}
                 className="flex items-center gap-2 group transition-opacity hover:opacity-80"
               >
-                <span className="text-2xl lg:text-3xl text-accent-primary">♔</span>
+                <span className="text-2xl lg:text-3xl text-accent-emerald">♔</span>
                 <span className="text-lg lg:text-xl font-bold text-text-primary tracking-tight">
                   Chess
                 </span>
@@ -79,59 +69,52 @@ export default function Game() {
               <div className={`
                 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
                 ${isConnected 
-                  ? 'bg-status-online/10 text-status-online' 
-                  : 'bg-status-offline/10 text-status-offline'
+                  ? 'bg-accent-emerald/10 text-accent-emerald' 
+                  : 'bg-accent-danger/10 text-accent-danger'
                 }
               `}>
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-status-online animate-pulse' : 'bg-status-offline'}`} />
-                {isConnected ? 'Connected' : 'Connecting...'}
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-accent-emerald animate-pulse' : 'bg-accent-danger'}`} />
+                <span className="hidden sm:inline">{isConnected ? 'Connected' : 'Connecting...'}</span>
               </div>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Main Content - 3 Column Layout */}
-      <main className="relative z-10 flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
-        <div className="hidden lg:block">
+      {/* Main Content - Tight 3-Column Layout */}
+      <main className="flex-1 flex overflow-hidden">
+        {/* Left: Sidebar (Collapsed by default on mobile) */}
+        <div className={`
+          ${sidebarCollapsed ? 'w-0 lg:w-20' : 'w-64'} 
+          transition-all duration-300 border-r border-white/5 bg-background-sidebar flex-shrink-0
+          hidden lg:block
+        `}>
           <Sidebar 
             isCollapsed={sidebarCollapsed} 
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
           />
         </div>
 
-        {/* Mobile Sidebar */}
-        <div className="lg:hidden">
-          {!sidebarCollapsed && (
-            <Sidebar 
-              isCollapsed={false} 
-              onToggle={() => setSidebarCollapsed(true)} 
-            />
-          )}
-        </div>
-
-        {/* Center: Board Area (Primary Focus) */}
-        <div className="flex-1 flex items-center justify-center p-4 lg:p-8 overflow-auto">
-          <div className="w-full max-w-[680px]">
-            <ChessBoard 
-              chess={chess} 
-              playerColor={playerColor} 
-              isMyTurn={isMyTurn} 
-              onMove={makeMove} 
-            />
+        {/* Center: Board Area - MAXIMIZED */}
+        <div className="flex-1 flex flex-col items-center justify-center p-2 lg:p-4 overflow-hidden bg-background">
+          <div className="w-full h-full flex flex-col items-center justify-center">
+            {/* Board Container - Responsive but huge */}
+            <div className="flex-1 w-full flex items-center justify-center min-h-0">
+              <div className="h-full aspect-square max-h-[85vh] w-auto">
+                <ChessBoard 
+                  chess={chess} 
+                  playerColor={playerColor} 
+                  isMyTurn={isMyTurn} 
+                  onMove={makeMove} 
+                />
+              </div>
+            </div>
             
-            {/* Turn indicator below board */}
+            {/* Turn indicator - tighter spacing */}
             {status === 'playing' && (
-              <div className="mt-4 text-center animate-fade-in">
-                <span className={`
-                  inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold
-                  ${isMyTurn 
-                    ? 'bg-accent-primary/20 text-accent-primary' 
-                    : 'bg-white/5 text-text-muted'
-                  }
-                `}>
-                  <span className="text-lg">{turn === 'w' ? '♔' : '♚'}</span>
+              <div className="mt-4 flex items-center gap-3 px-6 py-2 rounded-xl bg-white/5 border border-white/10 shrink-0">
+                <span className="text-2xl">{turn === 'w' ? '♔' : '♚'}</span>
+                <span className={`font-semibold ${isMyTurn ? 'text-accent-emerald' : 'text-text-secondary'}`}>
                   {isMyTurn ? "Your turn" : "Opponent's turn"}
                 </span>
               </div>
@@ -139,9 +122,8 @@ export default function Game() {
           </div>
         </div>
 
-        {/* Right Panel: Game Info */}
-        <div className="hidden lg:flex flex-col w-[360px] border-l border-white/[0.06] bg-background-sidebar/50 backdrop-blur-sm p-5 gap-5 overflow-y-auto">
-          {/* Game Controls */}
+        {/* Right: Game Info Panel - Closer to board */}
+        <div className="hidden xl:flex flex-col w-[320px] border-l border-white/5 bg-background-elevated p-4 gap-4 overflow-y-auto shrink-0 shadow-2xl z-10">
           <GameControls
             isConnected={isConnected}
             playerColor={playerColor}
@@ -153,71 +135,18 @@ export default function Game() {
             onResign={resign}
           />
 
-          {/* Move History */}
-          <div className="card flex flex-col flex-1 min-h-0 max-h-[400px]">
-            <div className="card-header flex items-center justify-between">
-              <h3 className="text-sm font-bold text-text-primary">Moves</h3>
+          <div className="flex flex-col flex-1 min-h-0 bg-white/[0.02] rounded-xl border border-white/5 overflow-hidden">
+            <div className="p-3 border-b border-white/5 flex items-center justify-between text-xs uppercase tracking-wider font-bold text-text-muted">
+              <span>Move History</span>
               {moveHistory && moveHistory.length > 0 && (
-                <span className="text-[10px] font-bold text-text-muted bg-white/[0.06] px-2 py-1 rounded">
-                  {Math.ceil(moveHistory.length / 2)} moves
+                <span className="bg-white/5 px-2 py-0.5 rounded text-text-primary">
+                  {Math.ceil(moveHistory.length / 2)}
                 </span>
               )}
             </div>
-            <div className="card-body flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-hidden">
               <MoveHistory moves={moveHistory} />
             </div>
-          </div>
-        </div>
-
-        {/* Mobile Bottom Panel */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background-elevated/95 backdrop-blur-md border-t border-white/[0.06] p-4">
-          <div className="flex items-center justify-between gap-4">
-            {/* Status */}
-            <div className="flex items-center gap-2">
-              {playerColor && (
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-sm
-                  ${playerColor === 'white' 
-                    ? 'bg-text-primary text-background' 
-                    : 'bg-background text-text-primary border border-white/20'
-                  }
-                `}>
-                  {playerColor === 'white' ? '♔' : '♚'}
-                </div>
-              )}
-              <span className="text-sm font-medium text-text-secondary">
-                {status === 'waiting' && 'Waiting...'}
-                {status === 'playing' && (isMyTurn ? 'Your turn' : 'Opponent')}
-                {status === 'finished' && `${winner} wins`}
-              </span>
-            </div>
-            
-            {/* Action Button */}
-            {status === 'waiting' && (
-              <button 
-                className="btn-primary text-sm py-2 px-4"
-                onClick={handleStartGame}
-                disabled={!isConnected}
-              >
-                Find Game
-              </button>
-            )}
-            {status === 'playing' && (
-              <button 
-                className="btn-danger text-sm py-2 px-4"
-                onClick={resign}
-              >
-                Resign
-              </button>
-            )}
-            {status === 'finished' && (
-              <button 
-                className="btn-primary text-sm py-2 px-4"
-                onClick={() => window.location.reload()}
-              >
-                New Game
-              </button>
-            )}
           </div>
         </div>
       </main>
