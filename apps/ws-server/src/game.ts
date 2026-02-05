@@ -2,6 +2,7 @@ import { WebSocket } from "ws";
 import { Game as ChessGame } from "@chess/chess-engine";
 import {
   GAME_OVER,
+  TIME_UPDATE,
   INIT_GAME,
   INVALID_MOVE,
   MOVE,
@@ -13,13 +14,17 @@ export class Game {
   public player2: WebSocket;
   public engine: ChessGame;
   private startTime: number;
+  private whiteTime : number = 300000;
+  private blackTime : number = 300000;
+  private lastMoveTime : number = Date.now();
+  private clockInterval : NodeJS.Timeout | null = null;
 
   constructor(player1: WebSocket, player2: WebSocket) {
     this.player1 = player1;
     this.player2 = player2;
     this.engine = new ChessGame();
     this.startTime = Date.now();
-
+    this.startClock();
     this.player1.send(
       JSON.stringify({
         type: INIT_GAME,
@@ -36,6 +41,48 @@ export class Game {
         },
       }),
     );
+  }
+  private startClock() {
+    this.clockInterval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - this.lastMoveTime;
+
+      if(this.engine.getTurn() === "w") {
+        this.whiteTime -= elapsed;
+      } else {
+        this.blackTime -= elapsed;
+      }
+      this.lastMoveTime = now;
+      if(this.whiteTime <= 0 || this.blackTime <= 0) {
+        this.handleTimeOut();
+      }
+      this.broadcastTime();
+    }, 100);
+  }
+  private broadcastTime() {
+    const timeUpdate = JSON.stringify({
+      type: TIME_UPDATE,
+      payload: {
+        whiteTime: this.whiteTime,
+        blackTime: this.blackTime,
+      },
+    });
+    this.player1.send(timeUpdate);
+    this.player2.send(timeUpdate);
+  }
+  private handleTimeOut() {
+    if(this.clockInterval) {
+      clearInterval(this.clockInterval);
+    }
+    const winner  = this.whiteTime <= 0 ? "black" : "white";
+    const gameOver = JSON.stringify({
+      type: GAME_OVER,
+      payload: {
+        winner,
+      },
+    });
+    this.player1.send(gameOver);
+    this.player2.send(gameOver);
   }
 
   makeMove(socket: WebSocket, move: MovePayload) {
@@ -65,6 +112,8 @@ export class Game {
     }
 
     console.log("Move executed:", moveResult);
+
+    this.lastMoveTime = Date.now();
 
     // Check if game is over
     if (this.engine.isGameOver()) {

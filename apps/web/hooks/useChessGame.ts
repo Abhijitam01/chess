@@ -1,11 +1,16 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { createChess } from "@chess/chess-engine";
-import type {
-  ClientMessage,
+import {
   ServerMessage,
+  ClientMessage,
+  INIT_GAME,
+  MOVE,
+  GAME_OVER,
+  OPONENT_LEFT,
+  INVALID_MOVE,
+  TIME_UPDATE,
 } from "@repo/types";
 
 type GameStatus = "waiting" | "playing" | "finished";
@@ -28,15 +33,18 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     winner: null,
   });
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  const [timeState, setTimeState] = useState({
+    whiteTime: 300000,
+    blackTime: 300000
+  });
 
   const resign = () => {
     if (socket && isConnected) {
       socket.send(JSON.stringify({
-        type : "resign"
+        type: "resign"
       }));
     }
   }
-
 
   useEffect(() => {
     if (!socket) return;
@@ -46,8 +54,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
       console.log("Game message received:", message);
 
       switch (message.type) {
-        case "init_game":
-          // Reset move history when starting a new game
+        case INIT_GAME:
           setMoveHistory([]);
           setGameState((prev) => ({
             ...prev,
@@ -56,51 +63,44 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           }));
           break;
 
-          case "move" : {
-            // Extract move data from server
-            const { from, to, san, promotion } = message.payload as { from: string; to: string; san: string; promotion?: string };
+        case MOVE: {
+          const { from, to, san, promotion } = message.payload as { from: string; to: string; san: string; promotion?: string };
+          
+          setGameState((prev) => {
+            const newChess = createChess();
+            newChess.load(prev.chess.fen());
             
-            setGameState((prev) => {
-              const newChess = createChess();
-              newChess.load(prev.chess.fen());
+            try {
+              const moveResult = newChess.move({
+                from,
+                to,
+                promotion: promotion || 'q'
+              });
               
-              try {
-                // Apply the move using from/to
-                const moveResult = newChess.move({
-                  from,
-                  to,
-                  promotion: promotion || 'q'
-                });
-                
-                if (!moveResult) {
-                  console.error("Invalid move received from server:", message.payload);
-                  return prev;
-                }
-                
-                console.log("Move applied:", san, "New FEN:", newChess.fen());
-                
-                return {
-                  ...prev,
-                  chess: newChess,
-                  turn: newChess.turn(),
-                };
-              } catch (error) {
-                console.error("Error applying move from server:", error);
+              if (!moveResult) {
+                console.error("Invalid move received from server:", message.payload);
                 return prev;
               }
-            });
-            
-            // Update move history separately, outside of setGameState
-            setMoveHistory(prevHistory => {
-              const newHistory = [...prevHistory, san];
-              console.log("Move history updated:", newHistory);
-              return newHistory;
-            });
-            break;
-          }
+              
+              return {
+                ...prev,
+                chess: newChess,
+                turn: newChess.turn(),
+              };
+            } catch (error) {
+              console.error("Error applying move from server:", error);
+              return prev;
+            }
+          });
+          
+          setMoveHistory(prevHistory => {
+            const newHistory = [...prevHistory, san];
+            return newHistory;
+          });
+          break;
+        }
 
-
-        case "game_over":
+        case GAME_OVER:
           setGameState((prev) => ({
             ...prev,
             status: "finished",
@@ -108,7 +108,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           }));
           break;
 
-        case "opponent_left":
+        case OPONENT_LEFT:
           setGameState((prev) => ({
             ...prev,
             status: "finished",
@@ -117,36 +117,37 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           alert(message.payload.message);
           break;
 
-        case "invalid_move":
-          alert(`Invalid Move : ${message.payload.error}`  );
+        case INVALID_MOVE:
+          alert(`Invalid Move : ${message.payload.error}`);
+          break;
+
+        case TIME_UPDATE:
+          setTimeState({
+            whiteTime: message.payload.whiteTime,
+            blackTime: message.payload.blackTime,
+          });
           break;
       }
     };
 
     socket.addEventListener("message", handleMessage);
-
     return () => {
       socket.removeEventListener("message", handleMessage);
     };
   }, [socket]);
 
   const makeMove = (from: string, to: string) => {
-    // Only validate the move locally - don't apply it
-    // The server will broadcast the move back to us if it's valid
     const tempChess = createChess();
     tempChess.load(gameState.chess.fen());
     
     const move = tempChess.move({ from, to, promotion: "q" });
     if (move) {
-      // Send to server - don't update local state
-      // The server will broadcast the move back and we'll update then
       if (socket && isConnected) {
         const message: ClientMessage = {
           type: "move",
           move: { from, to },
         };
         socket.send(JSON.stringify(message));
-        console.log("Move sent to server:", { from, to, san: move.san });
       }
       return true;
     }
@@ -170,6 +171,8 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     resetGame,
     moveHistory,
     resign,
+    whiteTime: timeState.whiteTime,
+    blackTime: timeState.blackTime,
     isMyTurn:
       gameState.playerColor !== null &&
       ((gameState.playerColor === "white" && gameState.turn === "w") ||

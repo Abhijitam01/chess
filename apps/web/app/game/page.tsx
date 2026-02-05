@@ -9,6 +9,7 @@ import { MoveHistory } from "../../components/MoveHistory";
 import { Sidebar } from "../../components/Sidebar";
 import { useRouter } from "next/navigation";
 import { INIT_GAME } from '@repo/types';
+import { ChessClock } from "../../components/ChessClock";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
 
@@ -23,12 +24,14 @@ export default function Game() {
     moveHistory, 
     makeMove, 
     isMyTurn,
-    resign 
+    resign,
+    whiteTime,
+    blackTime,
   } = useChessGame(socket, isConnected);
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [moveHistoryExpanded, setMoveHistoryExpanded] = useState(false);
-
+  
   const handleStartGame = () => {
     sendMessage({ type: INIT_GAME });
   };
@@ -124,6 +127,13 @@ export default function Game() {
 
         {/* Right: Game Info Panel - Closer to board */}
         <div className="hidden xl:flex flex-col w-[320px] border-l border-white/5 bg-background-elevated p-4 gap-4 overflow-y-auto shrink-0 shadow-2xl z-10">
+          {/* Chess Clock */}
+          <ChessClock 
+            whiteTime={whiteTime} 
+            blackTime={blackTime} 
+            turn={turn} 
+          />
+
           <GameControls
             isConnected={isConnected}
             playerColor={playerColor}

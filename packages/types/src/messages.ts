@@ -7,11 +7,14 @@ export const JOIN_GAME = "join_game" as const;
 export const OPONENT_LEFT = "opponent_left" as const;
 export const INVALID_MOVE = "invalid_move" as const;
 export const RESIGN = "resign" as const;
-
+export const TIME_UPDATE = "time_update" as const;
 export interface OpponentLeftPayload {
   message: string;
 }
-
+export interface TimeUpdatePayload {
+  whiteTime: number;
+  blackTime: number;
+}
 export interface InitGamePayload {
   color: Color;
 }
@@ -23,6 +26,12 @@ export interface ServerResignMessage {
   type: typeof RESIGN;
   payload: ResignPayload;
 }
+
+export interface ServerTimeUpdateMessage {
+  type: typeof TIME_UPDATE;
+  payload: TimeUpdatePayload;
+}
+
 export interface MovePayload {
   from: string;
   to: string;
@@ -68,7 +77,8 @@ export type ServerMessage =
   | ServerGameOverMessage
   | ServerOpponentLeftMessage
   | ServerResignMessage
-  | ServerInvalidMoveMessage;
+  | ServerInvalidMoveMessage
+  | ServerTimeUpdateMessage;
 
 export interface ClientInitGameMessage {
   type: typeof INIT_GAME;
@@ -87,3 +97,7 @@ export interface ClientResignMessage {
 }
 
 export type ClientMessage = ClientInitGameMessage | ClientMoveMessage | ClientResignMessage;
+
+export interface ClientTimeUpdateMessage {
+  type: typeof TIME_UPDATE;
+}
