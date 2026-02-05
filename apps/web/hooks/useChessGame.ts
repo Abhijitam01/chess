@@ -5,12 +5,6 @@ import { createChess } from "@chess/chess-engine";
 import {
   ServerMessage,
   ClientMessage,
-  INIT_GAME,
-  MOVE,
-  GAME_OVER,
-  OPONENT_LEFT,
-  INVALID_MOVE,
-  TIME_UPDATE,
 } from "@repo/types";
 
 type GameStatus = "waiting" | "playing" | "finished";
@@ -54,7 +48,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
       console.log("Game message received:", message);
 
       switch (message.type) {
-        case INIT_GAME:
+        case "init_game":
           setMoveHistory([]);
           setGameState((prev) => ({
             ...prev,
@@ -63,7 +57,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           }));
           break;
 
-        case MOVE: {
+        case "move": {
           const { from, to, san, promotion } = message.payload as { from: string; to: string; san: string; promotion?: string };
           
           setGameState((prev) => {
@@ -100,7 +94,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           break;
         }
 
-        case GAME_OVER:
+        case "game_over":
           setGameState((prev) => ({
             ...prev,
             status: "finished",
@@ -108,7 +102,7 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           }));
           break;
 
-        case OPONENT_LEFT:
+        case "opponent_left":
           setGameState((prev) => ({
             ...prev,
             status: "finished",
@@ -117,11 +111,11 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           alert(message.payload.message);
           break;
 
-        case INVALID_MOVE:
+        case "invalid_move":
           alert(`Invalid Move : ${message.payload.error}`);
           break;
 
-        case TIME_UPDATE:
+        case "time_update":
           setTimeState({
             whiteTime: message.payload.whiteTime,
             blackTime: message.payload.blackTime,
