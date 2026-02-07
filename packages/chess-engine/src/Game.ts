@@ -38,6 +38,14 @@ export class Game {
     // that *cannot* move is the loser.
     return this.board.turn() === "w" ? "black" : "white";
   }
+
+  moveCount(): number {
+    return this.board.history().length;
+  }
+
+  isCheckmate(): boolean {
+    return this.board.isCheckmate();
+  }
 }
 
 export function createChess() {

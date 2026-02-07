@@ -8,16 +8,13 @@ import { GameControls } from "../../components/GameControls";
 import { MoveHistory } from "../../components/MoveHistory";
 import { Sidebar } from "../../components/Sidebar";
 import { useRouter } from "next/navigation";
-import { INIT_GAME } from '@repo/types';
 import { ChessClock } from "../../components/ChessClock";
-import { GameOverModal } from "../../components/GameOverModal";
-import { MatchStartAnimation } from "../../components/MatchStartAnimation";
 import { MatchmakingButton } from "../../components/MatchMakingButton";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
 
 export default function Game() {
-  const { socket, isConnected, sendMessage } = useWebSocket(WS_URL);
+  const { socket, isConnected } = useWebSocket(WS_URL);
   const { 
     chess, 
     playerColor, 
@@ -31,7 +28,6 @@ export default function Game() {
     whiteTime,
     blackTime,
     showMatchStartAnimation,
-    onMatchAnimationComplete,
     gameOverReason,
     startMatchMaking,
     resetGame,
@@ -39,16 +35,11 @@ export default function Game() {
   } = useChessGame(socket, isConnected);
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [moveHistoryExpanded, setMoveHistoryExpanded] = useState(false);
-  
-  const handleStartGame = () => {
-    sendMessage({ type: INIT_GAME });
-  };
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden">
       {/* Navigation - Fixed Height */}
-      <nav className="h-16 relative z-20 border-b border-white/[0.06] bg-background-elevated/80 backdrop-blur-md flex-shrink-0">
+      <nav className="h-16 relative z-20 border-b border-white/10 bg-zinc-900/80 backdrop-blur-md flex-shrink-0">
         <div className="max-w-[1920px] mx-auto px-4 lg:px-6 h-full flex items-center">
           <div className="flex items-center justify-between w-full">
             {/* Left: Menu + Logo */}
@@ -98,7 +89,7 @@ export default function Game() {
         {/* Left: Sidebar (Collapsed by default on mobile) */}
         <div className={`
           ${sidebarCollapsed ? 'w-0 lg:w-20' : 'w-64'} 
-          transition-all duration-300 border-r border-white/5 bg-background-sidebar flex-shrink-0
+          transition-all duration-300 border-r border-white/10 bg-zinc-900 flex-shrink-0
           hidden lg:block
         `}>
           <Sidebar 
@@ -108,17 +99,18 @@ export default function Game() {
         </div>
 
         {/* Center: Board Area - MAXIMIZED */}
-        <div className="flex-1 flex flex-col items-center justify-center p-2 lg:p-4 overflow-hidden bg-background">
+        <div className="flex-1 flex flex-col items-center justify-center p-2 lg:p-4 overflow-hidden bg-zinc-950">
           <div className="w-full h-full flex flex-col items-center justify-center">
             {/* Board Container - Responsive but huge */}
             <div className="flex-1 w-full flex items-center justify-center min-h-0">
-              <div className="h-full aspect-square max-h-[85vh] w-auto">
+              <div className="relative h-full aspect-square max-h-[85vh] w-auto">
                 <ChessBoard 
                   chess={chess} 
                   playerColor={playerColor} 
                   isMyTurn={isMyTurn} 
                   onMove={makeMove} 
                 />
+
               </div>
             </div>
             
@@ -135,7 +127,7 @@ export default function Game() {
         </div>
 
         {/* Right: Game Info Panel - Closer to board */}
-        <div className="hidden xl:flex flex-col w-[320px] border-l border-white/5 bg-background-elevated p-4 gap-4 overflow-y-auto shrink-0 shadow-2xl z-10">
+        <div className="hidden xl:flex flex-col w-[320px] border-l border-white/10 bg-zinc-900 p-4 gap-4 overflow-y-auto shrink-0 shadow-2xl z-10">
           {/* Chess Clock */}
           <ChessClock 
             whiteTime={whiteTime} 
@@ -149,9 +141,14 @@ export default function Game() {
             status={status}
             turn={turn}
             isMyTurn={isMyTurn}
-            winner={winner}
-            onStartGame={handleStartGame}
             onResign={resign}
+            winner={winner}
+            reason={gameOverReason}
+            showMatchStartAnimation={showMatchStartAnimation}
+            onPlayAgain={() => {
+              resetGame();
+              startMatchMaking();
+            }}
           />
 
           <MatchmakingButton
@@ -176,24 +173,7 @@ export default function Game() {
         </div>
       </main>
 
-      {/* Match Start Animation */}
-      <MatchStartAnimation
-        show={showMatchStartAnimation}
-        playerColor={playerColor}
-        onComplete={onMatchAnimationComplete}
-      />
 
-      {/* Game Over Modal */}
-      <GameOverModal
-        show={status === 'finished'}
-        winner={winner || ""}
-        playerColor={playerColor}
-        reason={gameOverReason || ""}
-        onPlayAgain={() => {
-          resetGame();
-          startMatchMaking();
-        }}
-      />
     </div>
   );
 }

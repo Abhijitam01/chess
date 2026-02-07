@@ -199,13 +199,18 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
       blackTime: 300000
     });
   };
+  useEffect(() => {
+    if (showMatchStartAnimation) {
+      const timer = setTimeout(() => {
+        setShowMatchStartAnimation(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showMatchStartAnimation]);
+
+
   const onMatchAnimationComplete = () => {
     setShowMatchStartAnimation(false);
-    setGameState(prev => ({
-      ...prev,
-      status: "playing",
-      matchMakingStatus: "playing",
-    }))
   }
  const [gameOverReason, setGameOverReason] = useState<string | null>(null);
 

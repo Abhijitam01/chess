@@ -6,9 +6,12 @@ interface GameControlsProps {
     turn: 'w' | 'b';
     isMyTurn: boolean;
     onResign: () => void;
+    winner?: string | null;
+    reason?: string | null;
+    showMatchStartAnimation?: boolean;
+    onPlayAgain?: () => void;
     // Keeping unused props structure if needed elsewhere, but removing from component args
     isConnected?: boolean;
-    winner?: string | null;
     onStartGame?: () => void;
 }
 
@@ -17,12 +20,24 @@ export function GameControls({
     status, 
     turn,
     isMyTurn,
-    onResign
+    onResign,
+    winner,
+    reason,
+    showMatchStartAnimation,
+    onPlayAgain
 }: GameControlsProps) {
     
     const getStatusBadge = () => {
         const baseClasses = "px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider";
         
+        if (showMatchStartAnimation) {
+             return (
+                <span className={`${baseClasses} bg-accent-emerald/20 text-accent-emerald animate-pulse`}>
+                    Starting
+                </span>
+            );
+        }
+
         if (status === 'waiting') {
             return (
                 <span className={`${baseClasses} bg-status-warning/20 text-status-warning`}>
@@ -55,11 +70,32 @@ export function GameControls({
 
             <div className="card-body flex flex-col gap-4">
                 {/* Status Message */}
-                <div className="bg-background/60 p-4 rounded-lg text-center border border-white/[0.04]">
+                <div className="bg-background/60 p-4 rounded-lg text-center border border-white/5">
                     <div className="text-sm font-medium text-text-secondary">
-                        {status === 'waiting' && "Finding an opponent..."}
-                        {status === 'playing' && (isMyTurn ? "Your turn to move" : "Waiting for opponent")}
-                        {status === 'finished' && "Game complete"}
+                        {showMatchStartAnimation && (
+                            <div className="flex flex-col gap-1">
+                                <span className="text-accent-emerald font-bold text-base">Match Starting!</span>
+                                <span>You are playing as {playerColor}</span>
+                            </div>
+                        )}
+                        {!showMatchStartAnimation && status === 'waiting' && "Finding an opponent..."}
+                        {!showMatchStartAnimation && status === 'playing' && (isMyTurn ? "Your turn to move" : "Waiting for opponent")}
+                        {!showMatchStartAnimation && status === 'finished' && (
+                            <div className="flex flex-col gap-2">
+                                <div className="text-base font-bold">
+                                    {winner ? (
+                                        <span className={winner === playerColor ? "text-accent-emerald" : "text-accent-danger"}>
+                                            {winner === playerColor ? "You Won!" : "You Lost"}
+                                        </span>
+                                    ) : (
+                                        <span className="text-text-secondary">Draw</span>
+                                    )}
+                                </div>
+                                <div className="text-xs text-text-muted">
+                                    {reason ? `by ${reason}` : "Game Over"}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -128,6 +164,15 @@ export function GameControls({
                             onClick={onResign}
                         >
                             Resign Game
+                        </button>
+                    )}
+                    
+                    {status === 'finished' && onPlayAgain && (
+                        <button 
+                            className="btn-primary w-full text-sm"
+                            onClick={onPlayAgain}
+                        >
+                            Play Again
                         </button>
                     )}
                 </div>
