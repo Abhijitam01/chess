@@ -17,6 +17,10 @@ export interface TimeUpdatePayload {
 }
 export interface InitGamePayload {
   color: Color;
+  timeControl?: {
+    whiteTime: number;
+    blackTime: number;
+  };
 }
 
 export interface ResignPayload {
@@ -35,10 +39,13 @@ export interface ServerTimeUpdateMessage {
 export interface MovePayload {
   from: string;
   to: string;
+  san?: string;
+  promotion?: string;
 }
 
 export interface GameOverPayload {
   winner: Color;
+  reason?: string;
 }
 
 export interface ServerInitGameMessage {

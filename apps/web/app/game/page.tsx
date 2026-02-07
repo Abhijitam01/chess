@@ -10,6 +10,9 @@ import { Sidebar } from "../../components/Sidebar";
 import { useRouter } from "next/navigation";
 import { INIT_GAME } from '@repo/types';
 import { ChessClock } from "../../components/ChessClock";
+import { GameOverModal } from "../../components/GameOverModal";
+import { MatchStartAnimation } from "../../components/MatchStartAnimation";
+import { MatchmakingButton } from "../../components/MatchMakingButton";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
 
@@ -27,6 +30,12 @@ export default function Game() {
     resign,
     whiteTime,
     blackTime,
+    showMatchStartAnimation,
+    onMatchAnimationComplete,
+    gameOverReason,
+    startMatchMaking,
+    resetGame,
+    matchMakingStatus,
   } = useChessGame(socket, isConnected);
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -145,6 +154,12 @@ export default function Game() {
             onResign={resign}
           />
 
+          <MatchmakingButton
+            status={matchMakingStatus}
+            onFindOpponent={startMatchMaking}
+            isConnected={isConnected}
+          />
+
           <div className="flex flex-col flex-1 min-h-0 bg-white/[0.02] rounded-xl border border-white/5 overflow-hidden">
             <div className="p-3 border-b border-white/5 flex items-center justify-between text-xs uppercase tracking-wider font-bold text-text-muted">
               <span>Move History</span>
@@ -160,6 +175,25 @@ export default function Game() {
           </div>
         </div>
       </main>
+
+      {/* Match Start Animation */}
+      <MatchStartAnimation
+        show={showMatchStartAnimation}
+        playerColor={playerColor}
+        onComplete={onMatchAnimationComplete}
+      />
+
+      {/* Game Over Modal */}
+      <GameOverModal
+        show={status === 'finished'}
+        winner={winner || ""}
+        playerColor={playerColor}
+        reason={gameOverReason || ""}
+        onPlayAgain={() => {
+          resetGame();
+          startMatchMaking();
+        }}
+      />
     </div>
   );
 }

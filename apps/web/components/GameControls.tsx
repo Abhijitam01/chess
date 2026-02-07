@@ -1,24 +1,22 @@
 "use client";
 
 interface GameControlsProps {
-    isConnected: boolean;
     playerColor: 'white' | 'black' | null;
     status: 'waiting' | 'playing' | 'finished';
     turn: 'w' | 'b';
     isMyTurn: boolean;
-    winner: string | null;
-    onStartGame: () => void;
     onResign: () => void;
+    // Keeping unused props structure if needed elsewhere, but removing from component args
+    isConnected?: boolean;
+    winner?: string | null;
+    onStartGame?: () => void;
 }
 
-export function GameControls({ 
-    isConnected, 
+export function GameControls({
     playerColor, 
     status, 
     turn,
     isMyTurn,
-    winner,
-    onStartGame,
     onResign
 }: GameControlsProps) {
     
@@ -124,16 +122,6 @@ export function GameControls({
 
                 {/* Action Buttons */}
                 <div className="mt-2">
-                    {status === 'waiting' && (
-                        <button 
-                            className="btn-primary w-full text-sm"
-                            onClick={onStartGame}
-                            disabled={!isConnected}
-                        >
-                            {isConnected ? 'Find Opponent' : 'Connecting...'}
-                        </button>
-                    )}
-
                     {status === 'playing' && (
                         <button 
                             className="btn-danger w-full text-sm"
@@ -141,25 +129,6 @@ export function GameControls({
                         >
                             Resign Game
                         </button>
-                    )}
-
-                    {status === 'finished' && (
-                        <div className="flex flex-col gap-3">
-                            <div className="text-center p-4 bg-background/60 rounded-lg border border-accent-gold/20">
-                                <div className="text-3xl mb-2">
-                                    {winner === 'white' ? '♔' : '♚'}
-                                </div>
-                                <h3 className="text-lg font-bold text-accent-gold capitalize">
-                                    {winner} wins!
-                                </h3>
-                            </div>
-                            <button 
-                                className="btn-primary w-full text-sm"
-                                onClick={() => window.location.reload()}
-                            >
-                                Play Again
-                            </button>
-                        </div>
                     )}
                 </div>
             </div>
