@@ -1,11 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createChess } from "@chess/chess-engine";
-import {
-  ServerMessage,
-  ClientMessage,
-} from "@repo/types";
+import { ServerMessage, ClientMessage } from "@repo/types";
 
 type GameStatus = "waiting" | "playing" | "finished";
 type PlayerColor = "white" | "black" | null;
@@ -16,10 +13,8 @@ interface GameState {
   playerColor: PlayerColor;
   status: GameStatus;
   turn: "w" | "b";
-  winner: string | null;
+  winner: PlayerColor;
   matchMakingStatus: MatchMakingStatus;
-  whiteTime: number;
-  blackTime: number;
   error: string | null;
 }
 
@@ -31,157 +26,84 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     turn: "w",
     winner: null,
     matchMakingStatus: "idle",
-    whiteTime: 300000,
-    blackTime: 300000,
     error: null,
   });
-  const [showMatchStartAnimation, setShowMatchStartAnimation] = useState(false);
+
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  const [showMatchStartAnimation, setShowMatchStartAnimation] = useState(false);
+  const [gameOverReason, setGameOverReason] = useState<string | null>(null);
+
   const [timeState, setTimeState] = useState({
     whiteTime: 300000,
-    blackTime: 300000
+    blackTime: 300000,
   });
 
-  const resign = () => {
-    if (socket && isConnected) {
-      socket.send(JSON.stringify({
-        type: "resign"
-      }));
-    }
-  }
+  const timerRef = useRef<number | null>(null);
+  const lastUpdateRef = useRef<number>(Date.now());
+  const timeoutSentRef = useRef(false);
 
-  const startMatchMaking = () => {
-    setGameState((prev) => ({
-      ...prev,
-      matchMakingStatus: "finding",
-    }));
-    if (socket && isConnected) {
-      socket.send(JSON.stringify({
-        type: "init_game",
-      }));
+  /* -------------------------------- helpers -------------------------------- */
+
+  const stopClock = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
   };
 
-  useEffect(() => {
-    if (!socket) return;
+  const isMyTurn =
+    gameState.playerColor !== null &&
+    ((gameState.playerColor === "white" && gameState.turn === "w") ||
+      (gameState.playerColor === "black" && gameState.turn === "b"));
 
-    const handleMessage = (event: MessageEvent) => {
-      const message = JSON.parse(event.data as string) as ServerMessage;
-      console.log("Game message received:", message);
+  /* -------------------------------- actions -------------------------------- */
 
-      switch (message.type) {
-        case "init_game":
-          setMoveHistory([]);
-          setShowMatchStartAnimation(true);
-          setGameState((prev) => ({
-            ...prev,
-            playerColor: message.payload.color,
-            status: "playing",
-            matchMakingStatus: "playing",
-            whiteTime: message.payload.timeControl?.whiteTime || 300000,
-            blackTime: message.payload.timeControl?.blackTime || 300000,
-            error: null
-          }));
-          break;
+  const startMatchMaking = () => {
+    setGameState((p) => ({ ...p, matchMakingStatus: "finding" }));
+    socket?.send(JSON.stringify({ type: "init_game" }));
+  };
 
-        case "move": {
-          const { from, to, san, promotion } = message.payload as { from: string; to: string; san: string; promotion?: string };
-          
-          setGameState((prev) => {
-            const newChess = createChess();
-            newChess.load(prev.chess.fen());
-            
-            try {
-              const moveResult = newChess.move({
-                from,
-                to,
-                promotion: promotion || 'q'
-              });
-              
-              if (!moveResult) {
-                console.error("Invalid move received from server:", message.payload);
-                return prev;
-              }
-              
-              return {
-                ...prev,
-                chess: newChess,
-                turn: newChess.turn(),
-              };
-            } catch (error) {
-              console.error("Error applying move from server:", error);
-              return prev;
-            }
-          });
-          
-          setMoveHistory(prevHistory => {
-            const newHistory = [...prevHistory, san];
-            return newHistory;
-          });
-          break;
-        }
+  const resign = () => {
+    if (!socket || !isConnected) return;
 
-        case "game_over":
-          setGameOverReason(message.payload.reason || "checkmate");
-          setGameState((prev) => ({
-            ...prev,
-            status: "finished",
-            winner: message.payload.winner,
-            matchMakingStatus: "finished",
-            error: null,
-          }));
-          break;
+    // 🔥 stop clock immediately
+    stopClock();
 
-        case "opponent_left":
-          setGameOverReason("disconnected");
-          setGameState((prev) => ({
-            ...prev,
-            status: "finished",
-            winner: prev.playerColor,
-            matchMakingStatus: "finished",
-            error: null,
-          }));
-          alert(message.payload.message);
-          break;
+    setGameState((prev) => ({
+      ...prev,
+      status: "finished",
+      matchMakingStatus: "finished",
+      winner: prev.playerColor === "white" ? "black" : "white",
+    }));
 
-        case "invalid_move":
-          alert(`Invalid Move : ${message.payload.error}`);
-          break;
+    setGameOverReason("resign");
 
-        case "time_update":
-          setTimeState({
-            whiteTime: message.payload.whiteTime,
-            blackTime: message.payload.blackTime,
-          });
-          break;
-      }
-    };
-
-    socket.addEventListener("message", handleMessage);
-    return () => {
-      socket.removeEventListener("message", handleMessage);
-    };
-  }, [socket]);
+    socket.send(JSON.stringify({ type: "resign" }));
+  };
 
   const makeMove = (from: string, to: string) => {
-    const tempChess = createChess();
-    tempChess.load(gameState.chess.fen());
-    
-    const move = tempChess.move({ from, to, promotion: "q" });
-    if (move) {
-      if (socket && isConnected) {
-        const message: ClientMessage = {
-          type: "move",
-          move: { from, to },
-        };
-        socket.send(JSON.stringify(message));
-      }
-      return true;
-    }
-    return false;
+    if (!isMyTurn) return false;
+
+    const temp = createChess();
+    temp.load(gameState.chess.fen());
+
+    const move = temp.move({ from, to, promotion: "q" });
+    if (!move) return false;
+
+    socket?.send(
+      JSON.stringify({
+        type: "move",
+        move: { from, to },
+      } satisfies ClientMessage)
+    );
+
+    return true;
   };
 
   const resetGame = () => {
+    stopClock();
+    timeoutSentRef.current = false;
+
     setGameState({
       chess: createChess(),
       playerColor: null,
@@ -189,46 +111,173 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
       turn: "w",
       winner: null,
       matchMakingStatus: "idle",
-      whiteTime: 300000,
-      blackTime: 300000,
       error: null,
     });
+
     setMoveHistory([]);
-    setTimeState({
-      whiteTime: 300000,
-      blackTime: 300000
-    });
+    setTimeState({ whiteTime: 300000, blackTime: 300000 });
+    setGameOverReason(null);
   };
+
+  /* -------------------------------- timer -------------------------------- */
+
   useEffect(() => {
-    if (showMatchStartAnimation) {
-      const timer = setTimeout(() => {
-        setShowMatchStartAnimation(false);
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (
+      gameState.status !== "playing" ||
+      !socket ||
+      !isConnected ||
+      gameOverReason
+    ) {
+      stopClock();
+      return;
     }
+
+    lastUpdateRef.current = Date.now();
+
+    timerRef.current = window.setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - lastUpdateRef.current;
+      lastUpdateRef.current = now;
+
+      setTimeState((prev) => {
+        if (gameState.turn === "w") {
+          const whiteTime = Math.max(0, prev.whiteTime - elapsed);
+
+          if (whiteTime === 0 && !timeoutSentRef.current) {
+            timeoutSentRef.current = true;
+            stopClock();
+            socket.send(
+              JSON.stringify({ type: "time_out", color: "white" })
+            );
+          }
+
+          return { ...prev, whiteTime };
+        } else {
+          const blackTime = Math.max(0, prev.blackTime - elapsed);
+
+          if (blackTime === 0 && !timeoutSentRef.current) {
+            timeoutSentRef.current = true;
+            stopClock();
+            socket.send(
+              JSON.stringify({ type: "time_out", color: "black" })
+            );
+          }
+
+          return { ...prev, blackTime };
+        }
+      });
+    }, 100);
+
+    return stopClock;
+  }, [gameState.status, gameState.turn, socket, isConnected, gameOverReason]);
+
+  /* ------------------------------ socket msgs ------------------------------ */
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      const message = JSON.parse(event.data) as ServerMessage;
+
+      switch (message.type) {
+        case "init_game": {
+          timeoutSentRef.current = false;
+          setMoveHistory([]);
+          setShowMatchStartAnimation(true);
+
+          const wt = message.payload.timeControl?.whiteTime ?? 300000;
+          const bt = message.payload.timeControl?.blackTime ?? 300000;
+
+          setTimeState({ whiteTime: wt, blackTime: bt });
+
+          setGameState((p) => ({
+            ...p,
+            chess: createChess(),
+            playerColor: message.payload.color,
+            status: "playing",
+            matchMakingStatus: "playing",
+            turn: "w",
+            winner: null,
+          }));
+
+          lastUpdateRef.current = Date.now();
+          break;
+        }
+
+        case "move": {
+          const { from, to, san, promotion } = message.payload;
+
+          setGameState((prev) => {
+            const chess = createChess();
+            chess.load(prev.chess.fen());
+            chess.move({ from, to, promotion: promotion || "q" });
+
+            return { ...prev, chess, turn: chess.turn() };
+          });
+
+          setMoveHistory((h) => [...h, san]);
+          lastUpdateRef.current = Date.now();
+          break;
+        }
+
+        case "game_over":
+          stopClock();
+          setGameOverReason(message.payload.reason || "game_over");
+          setGameState((p) => ({
+            ...p,
+            status: "finished",
+            winner: message.payload.winner,
+            matchMakingStatus: "finished",
+          }));
+          break;
+
+        case "opponent_left":
+          stopClock();
+          setGameOverReason("opponent_left");
+          setGameState((p) => ({
+            ...p,
+            status: "finished",
+            winner: p.playerColor,
+            matchMakingStatus: "finished",
+          }));
+          break;
+
+        case "time_update":
+          setTimeState({
+            whiteTime: message.payload.whiteTime,
+            blackTime: message.payload.blackTime,
+          });
+          lastUpdateRef.current = Date.now();
+          break;
+      }
+    };
+
+    socket.addEventListener("message", handleMessage);
+    return () => socket.removeEventListener("message", handleMessage);
+  }, [socket]);
+
+  /* -------------------------------- effects -------------------------------- */
+
+  useEffect(() => {
+    if (!showMatchStartAnimation) return;
+    const t = setTimeout(() => setShowMatchStartAnimation(false), 2000);
+    return () => clearTimeout(t);
   }, [showMatchStartAnimation]);
 
-
-  const onMatchAnimationComplete = () => {
-    setShowMatchStartAnimation(false);
-  }
- const [gameOverReason, setGameOverReason] = useState<string | null>(null);
+  /* -------------------------------- return -------------------------------- */
 
   return {
     ...gameState,
-    makeMove,
-    resetGame,
-    moveHistory,
-    resign,
     whiteTime: timeState.whiteTime,
     blackTime: timeState.blackTime,
+    makeMove,
+    resign,
+    resetGame,
     startMatchMaking,
+    moveHistory,
     showMatchStartAnimation,
     gameOverReason,
-    onMatchAnimationComplete,
-    isMyTurn:
-      gameState.playerColor !== null &&
-      ((gameState.playerColor === "white" && gameState.turn === "w") ||
-        (gameState.playerColor === "black" && gameState.turn === "b")),
+    isMyTurn,
+    onMatchAnimationComplete: () => setShowMatchStartAnimation(false),
   };
 }

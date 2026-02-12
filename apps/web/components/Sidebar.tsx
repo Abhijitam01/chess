@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 interface SidebarProps {
     isCollapsed: boolean;
     onToggle: () => void;
 }
 
-export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
+export const Sidebar = memo(function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const [activeSection, setActiveSection] = useState<string>('settings');
 
     return (
@@ -154,4 +154,4 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             )}
         </>
     );
-}
+});

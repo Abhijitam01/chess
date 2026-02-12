@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 
 interface MoveHistoryProps {
   moves: string[];
 }
 
-export function MoveHistory({ moves }: MoveHistoryProps) {
+export const MoveHistory = memo(function MoveHistory({ moves }: MoveHistoryProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to latest move
@@ -84,5 +84,6 @@ export function MoveHistory({ moves }: MoveHistoryProps) {
         )}
       </div>
     </div>
-  );
+  )
 }
+);

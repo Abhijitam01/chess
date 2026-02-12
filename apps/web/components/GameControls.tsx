@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from 'react';
+
 interface GameControlsProps {
     playerColor: 'white' | 'black' | null;
     status: 'waiting' | 'playing' | 'finished';
@@ -15,7 +17,7 @@ interface GameControlsProps {
     onStartGame?: () => void;
 }
 
-export function GameControls({
+export const GameControls = memo(function GameControls({
     playerColor, 
     status, 
     turn,
@@ -179,4 +181,4 @@ export function GameControls({
             </div>
         </div>
     );
-}
+});

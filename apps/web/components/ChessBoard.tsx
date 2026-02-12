@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import type { Chess, Square } from '@chess/chess-engine';
 import { ChessPiece } from './ChessPiece';
 
@@ -15,7 +15,7 @@ interface ChessBoardProps {
     onMove: (from: string, to: string) => boolean;
 }
 
-export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardProps) {
+export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardProps) {
     const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
     const [validMoves, setValidMoves] = useState<string[]>([]);
     const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
@@ -179,4 +179,4 @@ export function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardP
             </div>
         </div>
     );
-}
+});
