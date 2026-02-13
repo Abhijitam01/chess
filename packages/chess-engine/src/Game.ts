@@ -46,6 +46,10 @@ export class Game {
   isCheckmate(): boolean {
     return this.board.isCheckmate();
   }
+
+  pgn(): string {
+    return this.board.pgn();
+  }
 }
 
 export function createChess() {

@@ -1,4 +1,5 @@
 import { WebSocket } from "ws";
+import crypto from "crypto";
 import { Game } from "./game";
 import { GAME_OVER, INIT_GAME, MOVE, OPONENT_LEFT, RESIGN, type ClientMessage } from "@repo/types";
 
@@ -44,7 +45,7 @@ export class GameManager {
       if (message.type === INIT_GAME) {
         if (this.pendingUser) {
           console.log("Starting new game");
-          const game = new Game(this.pendingUser, socket);
+          const game = new Game(this.pendingUser, socket, crypto.randomUUID(), crypto.randomUUID());
           this.games.push(game);
           this.pendingUser = null;
         } else {

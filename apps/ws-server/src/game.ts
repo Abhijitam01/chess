@@ -1,5 +1,6 @@
 import { WebSocket } from "ws";
 import { Game as ChessGame } from "@chess/chess-engine";
+import {DatabaseService} from "./services/DatabaseService";
 import {
   GAME_OVER,
   TIME_UPDATE,
@@ -18,13 +19,21 @@ export class Game {
   private blackTime : number = 300000;
   private lastMoveTime : number = Date.now();
   private clockInterval : NodeJS.Timeout | null = null;
+  private gameId?: string;
+  private whitePlayerId : string ;
+  private blackPlayerId : string ;
+  private dbService : DatabaseService;
 
-  constructor(player1: WebSocket, player2: WebSocket) {
+  constructor(player1: WebSocket, player2: WebSocket , whitePlayerId: string, blackPlayerId: string) {
     this.player1 = player1;
     this.player2 = player2;
+    this.whitePlayerId = whitePlayerId;
+    this.blackPlayerId = blackPlayerId;
     this.engine = new ChessGame();
     this.startTime = Date.now();
     this.startClock();
+    this.dbService = new DatabaseService();
+    this.initializeGame();
     this.player1.send(
       JSON.stringify({
         type: INIT_GAME,
@@ -41,6 +50,18 @@ export class Game {
         },
       }),
     );
+  }
+
+  async initializeGame() {
+    try {
+      // Create game in DB
+      // TODO: Get real ratings for users
+      const game = await this.dbService.createGame(this.whitePlayerId, this.blackPlayerId, 1200, 1200);
+      this.gameId = game.id;
+      console.log(`Game created with ID: ${this.gameId}`);
+    } catch(e) {
+      console.error(`Failed to create game: ${e}`);
+    }
   }
   
   private startClock() {
@@ -79,7 +100,58 @@ export class Game {
     this.player2.send(timeUpdate);
   }
 
+  private async handleGameOver() {
+    let winner: string | null = null;
+    let reason = 'draw';
+  
+    if (this.engine.isCheckmate()) {
+      winner = this.engine.getTurn() === 'w' ? 'black' : 'white';
+      reason = 'checkmate';
+    } 
+  
+    // Calculate rating changes (simple version)
+    const whiteChange = winner === 'white' ? 15 : winner === 'black' ? -15 : 0;
+    const blackChange = winner === 'black' ? 15 : winner === 'white' ? -15 : 0;
+  
+    // Save game result to database
+    try {
+      if(this.gameId) {
+      await this.dbService.updateGame(
+        this.gameId!,
+        winner!,
+        reason,
+        this.engine.pgn(),
+        whiteChange,
+        blackChange
+      );
+  
+      console.log(`Game ${this.gameId} saved: ${winner || 'draw'} by ${reason}`);
+      }
+    } catch (error) {
+      console.error('Failed to save game result:', error);
+    }
+  
+    // Notify players
+    const gameOverMessage = JSON.stringify({
+      type: GAME_OVER,
+      payload: { 
+        winner,
+        reason,
+        whiteRatingChange: whiteChange,
+        blackRatingChange: blackChange
+      }
+    });
+  
+    this.player1.send(gameOverMessage);
+    this.player2.send(gameOverMessage);
+
+    if (this.clockInterval) clearInterval(this.clockInterval);
+  }
+
   private handleTimeOut() {
+    if(this.gameId) {
+      this.dbService.updateGame(this.gameId!, "timeout", "timeout", this.engine.pgn(), 0, 0);
+    }
     if(this.clockInterval) {
       clearInterval(this.clockInterval);
     }
@@ -95,7 +167,7 @@ export class Game {
     this.player2.send(gameOver);
   }
 
-  makeMove(socket: WebSocket, move: MovePayload) {
+  async makeMove(socket: WebSocket, move: MovePayload) {
     // Validate turn
     if (this.engine.getTurn() === "w" && socket !== this.player1) {
       return;
@@ -124,21 +196,7 @@ export class Game {
 
       // Check for game over
       if (this.engine.isGameOver()) {
-        const winner = this.engine.getWinner();
-        const reason = this.engine.isCheckmate() ? "checkmate" : "draw";
-        
-        const gameOver = JSON.stringify({
-          type: GAME_OVER,
-          payload: {
-            winner,
-            reason
-          }
-        });
-
-        this.player1.send(gameOver);
-        this.player2.send(gameOver);
-        
-        if (this.clockInterval) clearInterval(this.clockInterval);
+        await this.handleGameOver();
         return;
       }
 

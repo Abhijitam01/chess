@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique @db.VarChar(50)
+  rating       Int      @default(1000)
+  email        String   @unique @db.VarChar(255)
+  password     String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  gamesAsWhite Game[]   @relation("WhitePlayer")
+  gamesAsBlack Game[]   @relation("BlackPlayer")
+}
+
+model Game {
+  id                String     @id @default(uuid())
+  whitePlayerId     String     @db.VarChar(50)
+  blackPlayerId     String     @db.VarChar(50)
+  winner            String?    @db.VarChar(50)
+  resultReason      String?    @db.VarChar(50)
+  pgn               String?    @db.Text
+  whiteRatingChange Int?       @map("white_rating_change")
+  blackRatingChange Int?       @map("black_rating_change")
+  startedAt         DateTime   @map("started_at")
+  finishedAt        DateTime?  @map("finished_at")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  whitePlayer       User       @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+  blackPlayer       User       @relation("BlackPlayer", fields: [blackPlayerId], references: [id], onDelete: Cascade)
+  moves             GameMove[]
+
+  @@index([whitePlayerId])
+  @@index([blackPlayerId])
+  @@map("games")
+}
+
+model GameMove {
+  id            BigInt   @id @default(autoincrement())
+  gameId        String   @map("game_id")
+  moveNumber    Int      @map("move_number")
+  moveSan       String   @map("move_san") @db.VarChar(10)
+  fen           String   @map("fen") @db.Text
+  timeLeftWhite Int?     @map("time_left_white")
+  timeLeftBlack Int?     @map("time_left_black")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId])
+  @@map("game_moves")
+}

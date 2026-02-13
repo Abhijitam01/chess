@@ -7,6 +7,8 @@ services:
     ports:
       - "8080:8080"
     restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/chess_db?schema=public
 
   web:
     build:

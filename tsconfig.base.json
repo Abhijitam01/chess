@@ -11,6 +11,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "preserveWatchOutput": true,
+    "preserveSymlinks": true,
     "skipLibCheck": true,
     "strict": true,
     "strictNullChecks": true,
@@ -20,7 +21,8 @@
       "@chess/chess-engine": ["packages/chess-engine/src/index.ts"],
       "@repo/types": ["packages/types/src/index.ts"],
       "@repo/ui": ["packages/ui/src/index.tsx"],
-      "@repo/utils": ["packages/utils/src/index.ts"]
+      "@repo/utils": ["packages/utils/src/index.ts"],
+      "@repo/db": ["packages/db/src/index.ts"]
     }
   },
   "exclude": ["node_modules"]
