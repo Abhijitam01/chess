@@ -13,6 +13,27 @@ export class DatabaseService {
     });
   }
 
+  async createGuestUser(userId: string) {
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (existingUser) {
+        return existingUser;
+    }
+
+    return prisma.user.create({
+      data: {
+        id: userId,
+        username: `Guest_${userId}`,
+        email: `${userId}@guest.com`,
+        password: "guest_password", // In a real app, this should be handled more securely or allow null
+        rating: 1000,
+      },
+    });
+  }
+
   async getUserByUsername(username : string) {
     return prisma.user.findUnique({
       where: {

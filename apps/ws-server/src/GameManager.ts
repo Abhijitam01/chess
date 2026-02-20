@@ -2,15 +2,23 @@ import { WebSocket } from "ws";
 import crypto from "crypto";
 import { Game } from "./game";
 import { GAME_OVER, INIT_GAME, MOVE, OPONENT_LEFT, RESIGN, type ClientMessage } from "@repo/types";
+import { DatabaseService } from './services/DatabaseService';
 
 export class GameManager {
   private games: Game[] = [];
   private pendingUser: WebSocket | null = null;
   private users: WebSocket[] = [];
+  private dbService: DatabaseService;
+  private socketToUSerId : Map<WebSocket, string> = new Map();
 
-  addUserToGame(socket: WebSocket) {
+  constructor() {
+    this.dbService = new DatabaseService();
+  }
+
+  addUserToGame(socket: WebSocket , userId: string) {
     console.log("User added to GameManager");
     this.users.push(socket);
+    this.socketToUSerId.set(socket, userId);
     this.addHandler(socket);
   }
 
@@ -31,6 +39,7 @@ export class GameManager {
     }
 
     this.users = this.users.filter((user) => user !== socket);
+    this.socketToUSerId.delete(socket);
 
     if (this.pendingUser === socket) {
       this.pendingUser = null;
@@ -44,8 +53,10 @@ export class GameManager {
 
       if (message.type === INIT_GAME) {
         if (this.pendingUser) {
+          const player1Id = this.socketToUSerId.get(this.pendingUser);
+          const player2Id = this.socketToUSerId.get(socket);
           console.log("Starting new game");
-          const game = new Game(this.pendingUser, socket, crypto.randomUUID(), crypto.randomUUID());
+          const game = new Game(this.pendingUser, socket, player1Id, player2Id);
           this.games.push(game);
           this.pendingUser = null;
         } else {

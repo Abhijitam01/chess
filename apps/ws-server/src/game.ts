@@ -56,6 +56,12 @@ export class Game {
     try {
       // Create game in DB
       // TODO: Get real ratings for users
+      if (this.whitePlayerId.startsWith('temp_')) {
+        await this.dbService.createGuestUser(this.whitePlayerId);
+      }
+      if (this.blackPlayerId.startsWith('temp_')) {
+          await this.dbService.createGuestUser(this.blackPlayerId);
+      }
       const game = await this.dbService.createGame(this.whitePlayerId, this.blackPlayerId, 1200, 1200);
       this.gameId = game.id;
       console.log(`Game created with ID: ${this.gameId}`);
@@ -194,10 +200,16 @@ export class Game {
       // And reset lastMoveTime for the next turn
       this.lastMoveTime = Date.now();
 
-      // Check for game over
-      if (this.engine.isGameOver()) {
-        await this.handleGameOver();
-        return;
+      // Save move to DB
+      if (this.gameId) {
+        this.dbService.saveMove(
+          this.gameId,
+          this.engine.moveCount(),
+          moveResult.san,
+          this.engine.getBoard().fen(),
+          this.whiteTime,
+          this.blackTime
+        );
       }
 
       // Broadcast move
@@ -207,12 +219,19 @@ export class Game {
           from: moveResult.from,
           to: moveResult.to,
           san: moveResult.san,
-          promotion: moveResult.promotion
+          promotion: moveResult.promotion,
+          san_move: moveResult.san // Adding this as some frontends might expect san_move or san
         }
       });
 
       this.player1.send(moveMsg);
       this.player2.send(moveMsg);
+
+      // Check for game over
+      if (this.engine.isGameOver()) {
+        await this.handleGameOver();
+        return;
+      }
 
     } catch (e) {
       console.error(e);
