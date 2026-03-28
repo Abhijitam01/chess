@@ -208,21 +208,33 @@ export default function HomePage() {
                 </div>
                 
                 <div className="hidden lg:flex items-center gap-12 text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
-                  {["Features", "Analyze", "Rankings", "Community"].map((item) => (
-                    <a 
-                      key={item} 
-                      href={`#${item.toLowerCase()}`} 
+                  {["Features", "Analyze", "Community"].map((item) => (
+                    <a
+                      key={item}
+                      href={`#${item.toLowerCase()}`}
                       className="hover:text-white transition-all relative group py-2"
                     >
                       {item}
                       <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full" />
                     </a>
                   ))}
+                  <button
+                    onClick={() => router.push("/leaderboard")}
+                    className="hover:text-white transition-all relative group py-2"
+                  >
+                    Rankings
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full" />
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-6">
-                  <button className="hidden sm:block text-xs font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white transition-colors">Login</button>
-                  <GlassButton primary className="py-3 px-8 text-sm" onClick={() => router.push("/game")}>
+                  <button
+                    className="hidden sm:block text-xs font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white transition-colors"
+                    onClick={() => router.push("/login")}
+                  >
+                    Login
+                  </button>
+                  <GlassButton primary className="py-3 px-8 text-sm" onClick={() => router.push("/signup")}>
                     Play Now
                   </GlassButton>
                 </div>

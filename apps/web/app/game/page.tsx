@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { useChessGame } from "../../hooks/useChessGame";
 import { ChessBoard } from "../../components/ChessBoard";
@@ -10,19 +10,37 @@ import { Sidebar } from "../../components/Sidebar";
 import { useRouter } from "next/navigation";
 import { ChessClock } from "../../components/ChessClock";
 import { MatchmakingButton } from "../../components/MatchMakingButton";
+import { useAuth } from "../../hooks/useAuth";
+import { useThemeContext } from "../../context/ThemeContext";
+import { useSound } from "../../hooks/useSound";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
 
 export default function Game() {
-  const { socket, isConnected } = useWebSocket(WS_URL);
-  const { 
-    chess, 
-    playerColor, 
-    status, 
-    turn, 
-    winner, 
-    moveHistory, 
-    makeMove, 
+  const { user, isLoading, logout } = useAuth();
+  const { boardTheme, showCoordinates, soundEnabled } = useThemeContext();
+  const { play: playSound } = useSound(soundEnabled);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/login");
+    }
+  }, [isLoading, user, router]);
+
+  const { socket, isConnected } = useWebSocket(
+    WS_URL,
+    user?.token ?? null,
+    () => { logout(); router.replace("/login"); }
+  );
+  const {
+    chess,
+    playerColor,
+    status,
+    turn,
+    winner,
+    moveHistory,
+    makeMove,
     isMyTurn,
     resign,
     whiteTime,
@@ -32,9 +50,21 @@ export default function Game() {
     startMatchMaking,
     resetGame,
     matchMakingStatus,
-  } = useChessGame(socket, isConnected);
-  const router = useRouter();
+    offerDraw,
+    acceptDraw,
+    declineDraw,
+    drawOfferPending,
+    drawOfferFromOpponent,
+  } = useChessGame(socket, isConnected, playSound);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  if (isLoading || !user) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-zinc-950 text-zinc-400">
+        <div className="text-lg font-medium">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden">
@@ -67,18 +97,34 @@ export default function Game() {
               </button>
             </div>
             
-            {/* Right: Connection Status */}
+            {/* Right: User Info + Connection Status */}
             <div className="flex items-center gap-3">
               <div className={`
                 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
-                ${isConnected 
-                  ? 'bg-accent-emerald/10 text-accent-emerald' 
+                ${isConnected
+                  ? 'bg-accent-emerald/10 text-accent-emerald'
                   : 'bg-accent-danger/10 text-accent-danger'
                 }
               `}>
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-accent-emerald animate-pulse' : 'bg-accent-danger'}`} />
                 <span className="hidden sm:inline">{isConnected ? 'Connected' : 'Connecting...'}</span>
               </div>
+              <button
+                onClick={() => router.push(`/profile/${user.username}`)}
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-xs font-bold text-zinc-300"
+              >
+                <span className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[10px] font-black">
+                  {user.username[0]?.toUpperCase()}
+                </span>
+                <span>{user.username}</span>
+                <span className="text-emerald-400">{user.rating}</span>
+              </button>
+              <button
+                onClick={() => { logout(); router.replace("/login"); }}
+                className="hidden sm:block text-xs font-bold text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1.5"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -104,11 +150,13 @@ export default function Game() {
             {/* Board Container - Responsive but huge */}
             <div className="flex-1 w-full flex items-center justify-center min-h-0">
               <div className="relative h-full aspect-square max-h-[85vh] w-auto">
-                <ChessBoard 
-                  chess={chess} 
-                  playerColor={playerColor} 
-                  isMyTurn={isMyTurn} 
-                  onMove={makeMove} 
+                <ChessBoard
+                  chess={chess}
+                  playerColor={playerColor}
+                  isMyTurn={isMyTurn}
+                  onMove={makeMove}
+                  boardTheme={boardTheme}
+                  showCoordinates={showCoordinates}
                 />
 
               </div>
@@ -149,6 +197,11 @@ export default function Game() {
               resetGame();
               startMatchMaking();
             }}
+            onOfferDraw={offerDraw}
+            onAcceptDraw={acceptDraw}
+            onDeclineDraw={declineDraw}
+            drawOfferPending={drawOfferPending}
+            drawOfferFromOpponent={drawOfferFromOpponent}
           />
 
           <MatchmakingButton
