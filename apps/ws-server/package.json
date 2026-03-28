@@ -13,9 +13,15 @@
     "@chess/chess-engine": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/types": "workspace:*",
-    "ws": "^8.18.0"
+    "bcryptjs": "^2.4.3",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.3",
     "@types/ws": "^8.5.12",
     "tsx": "^4.19.2",
