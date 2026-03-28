@@ -2,6 +2,7 @@
 import { useState, useEffect, memo } from 'react';
 import type { Chess, Square } from '@chess/chess-engine';
 import { ChessPiece } from './ChessPiece';
+import { BOARD_THEMES, type BoardTheme } from '../context/ThemeContext';
 
 // Move type from chess.js - only the fields we use
 interface Move {
@@ -13,9 +14,12 @@ interface ChessBoardProps {
     playerColor: 'white' | 'black' | null;
     isMyTurn: boolean;
     onMove: (from: string, to: string) => boolean;
+    boardTheme?: BoardTheme;
+    showCoordinates?: boolean;
+    readOnly?: boolean;
 }
 
-export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTurn, onMove }: ChessBoardProps) {
+export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTurn, onMove, boardTheme = 'classic', showCoordinates = true, readOnly = false }: ChessBoardProps) {
     const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
     const [validMoves, setValidMoves] = useState<string[]>([]);
     const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
@@ -36,7 +40,7 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
     }, [chess]);
 
     const handleSquareClick = (square: string) => {
-        if (!isMyTurn) return;
+        if (readOnly || !isMyTurn) return;
 
         const piece = chess.get(square as Square);
         const yourColor = playerColor === 'white' ? 'w' : 'b';
@@ -85,12 +89,10 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
     };
 
 
-    // Safe hex colors for board - fallback if variables fail
+    const themeColors = BOARD_THEMES[boardTheme];
     const colors = {
-        light: '#eeeed2',
-        dark: '#769656',
-        lightHover: '#f5f5e6',
-        darkHover: '#86a666',
+        light: themeColors.light,
+        dark: themeColors.dark,
         selected: '#f7ec5e',
         moveLight: 'rgba(247, 236, 94, 0.8)',
         moveDark: 'rgba(247, 236, 94, 0.6)'
@@ -137,21 +139,21 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
                                     style={{ backgroundColor: bgStyle }}
                                 >
                                     {/* Rank label (left side) */}
-                                    {fileIndex === 0 && (
-                                        <span className={`
-                                            absolute top-0.5 left-1 text-[10px] font-bold pointer-events-none select-none z-10
-                                            ${isLight ? 'text-[#769656]' : 'text-[#eeeed2]'}
-                                        `}>
+                                    {showCoordinates && fileIndex === 0 && (
+                                        <span
+                                            className="absolute top-0.5 left-1 text-[10px] font-bold pointer-events-none select-none z-10"
+                                            style={{ color: isLight ? colors.dark : colors.light }}
+                                        >
                                             {rank}
                                         </span>
                                     )}
-                                    
+
                                     {/* File label (bottom) */}
-                                    {rankIndex === 7 && (
-                                        <span className={`
-                                            absolute bottom-0.5 right-1 text-[10px] font-bold pointer-events-none select-none z-10
-                                            ${isLight ? 'text-[#769656]' : 'text-[#eeeed2]'}
-                                        `}>
+                                    {showCoordinates && rankIndex === 7 && (
+                                        <span
+                                            className="absolute bottom-0.5 right-1 text-[10px] font-bold pointer-events-none select-none z-10"
+                                            style={{ color: isLight ? colors.dark : colors.light }}
+                                        >
                                             {file}
                                         </span>
                                     )}

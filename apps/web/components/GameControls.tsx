@@ -12,21 +12,30 @@ interface GameControlsProps {
     reason?: string | null;
     showMatchStartAnimation?: boolean;
     onPlayAgain?: () => void;
-    // Keeping unused props structure if needed elsewhere, but removing from component args
     isConnected?: boolean;
     onStartGame?: () => void;
+    onOfferDraw?: () => void;
+    onAcceptDraw?: () => void;
+    onDeclineDraw?: () => void;
+    drawOfferPending?: boolean;
+    drawOfferFromOpponent?: boolean;
 }
 
 export const GameControls = memo(function GameControls({
-    playerColor, 
-    status, 
+    playerColor,
+    status,
     turn,
     isMyTurn,
     onResign,
     winner,
     reason,
     showMatchStartAnimation,
-    onPlayAgain
+    onPlayAgain,
+    onOfferDraw,
+    onAcceptDraw,
+    onDeclineDraw,
+    drawOfferPending = false,
+    drawOfferFromOpponent = false,
 }: GameControlsProps) {
     
     const getStatusBadge = () => {
@@ -158,19 +167,53 @@ export const GameControls = memo(function GameControls({
                     </div>
                 </div>
 
+                {/* Draw offer banner */}
+                {drawOfferFromOpponent && status === 'playing' && (
+                    <div className="bg-accent-primary/10 border border-accent-primary/30 rounded-lg p-3 flex flex-col gap-2">
+                        <p className="text-sm font-semibold text-text-primary text-center">Opponent offers a draw</p>
+                        <div className="flex gap-2">
+                            <button
+                                className="btn-primary flex-1 text-xs py-1.5"
+                                onClick={onAcceptDraw}
+                            >
+                                Accept
+                            </button>
+                            <button
+                                className="btn-danger flex-1 text-xs py-1.5"
+                                onClick={onDeclineDraw}
+                            >
+                                Decline
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Action Buttons */}
-                <div className="mt-2">
+                <div className="mt-2 flex flex-col gap-2">
                     {status === 'playing' && (
-                        <button 
-                            className="btn-danger w-full text-sm"
-                            onClick={onResign}
-                        >
-                            Resign Game
-                        </button>
+                        <>
+                            <button
+                                className="btn-danger w-full text-sm"
+                                onClick={onResign}
+                            >
+                                Resign Game
+                            </button>
+                            {onOfferDraw && !drawOfferPending && !drawOfferFromOpponent && (
+                                <button
+                                    className="w-full text-sm px-4 py-2 rounded-lg border border-white/20 text-text-secondary hover:text-text-primary hover:border-white/40 transition-colors"
+                                    onClick={onOfferDraw}
+                                >
+                                    Offer Draw
+                                </button>
+                            )}
+                            {drawOfferPending && (
+                                <p className="text-xs text-text-muted text-center">Draw offer sent…</p>
+                            )}
+                        </>
                     )}
-                    
+
                     {status === 'finished' && onPlayAgain && (
-                        <button 
+                        <button
                             className="btn-primary w-full text-sm"
                             onClick={onPlayAgain}
                         >
