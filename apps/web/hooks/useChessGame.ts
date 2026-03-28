@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createChess } from "@chess/chess-engine";
-import { ServerMessage, ClientMessage } from "@repo/types";
+import { ServerMessage, ClientMessage, DRAW_OFFER, DRAW_ACCEPT, DRAW_DECLINE } from "@repo/types";
 
 type GameStatus = "waiting" | "playing" | "finished";
 type PlayerColor = "white" | "black" | null;
@@ -18,7 +18,11 @@ interface GameState {
   error: string | null;
 }
 
-export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
+export function useChessGame(
+  socket: WebSocket | null,
+  isConnected: boolean,
+  onSoundEvent?: (type: "move" | "capture" | "check" | "start" | "gameOver") => void,
+) {
   const [gameState, setGameState] = useState<GameState>({
     chess: createChess(),
     playerColor: null,
@@ -37,6 +41,9 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     whiteTime: 300000,
     blackTime: 300000,
   });
+
+  const [drawOfferFromOpponent, setDrawOfferFromOpponent] = useState(false);
+  const [drawOfferPending, setDrawOfferPending] = useState(false);
 
   const timerRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -80,6 +87,24 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
 
     socket.send(JSON.stringify({ type: "resign" }));
   };
+
+  const offerDraw = useCallback(() => {
+    if (!socket || !isConnected) return;
+    setDrawOfferPending(true);
+    socket.send(JSON.stringify({ type: DRAW_OFFER }));
+  }, [socket, isConnected]);
+
+  const acceptDraw = useCallback(() => {
+    if (!socket || !isConnected) return;
+    setDrawOfferFromOpponent(false);
+    socket.send(JSON.stringify({ type: DRAW_ACCEPT }));
+  }, [socket, isConnected]);
+
+  const declineDraw = useCallback(() => {
+    if (!socket || !isConnected) return;
+    setDrawOfferFromOpponent(false);
+    socket.send(JSON.stringify({ type: DRAW_DECLINE }));
+  }, [socket, isConnected]);
 
   const makeMove = (from: string, to: string) => {
     if (!isMyTurn) return false;
@@ -180,10 +205,21 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
       const message = JSON.parse(event.data) as ServerMessage;
 
       switch (message.type) {
+        case "draw_offer":
+          setDrawOfferFromOpponent(true);
+          break;
+
+        case "draw_decline":
+          setDrawOfferPending(false);
+          break;
+
         case "init_game": {
           timeoutSentRef.current = false;
+          setDrawOfferPending(false);
+          setDrawOfferFromOpponent(false);
           setMoveHistory([]);
           setShowMatchStartAnimation(true);
+          onSoundEvent?.("start");
 
           const wt = message.payload.timeControl?.whiteTime ?? 300000;
           const bt = message.payload.timeControl?.blackTime ?? 300000;
@@ -210,18 +246,31 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
           setGameState((prev) => {
             const chess = createChess();
             chess.load(prev.chess.fen());
-            chess.move({ from, to, promotion: promotion || "q" });
+            const result = chess.move({ from, to, promotion: promotion || "q" });
+
+            if (result) {
+              if (chess.isCheck()) {
+                onSoundEvent?.("check");
+              } else if (result.captured) {
+                onSoundEvent?.("capture");
+              } else {
+                onSoundEvent?.("move");
+              }
+            }
 
             return { ...prev, chess, turn: chess.turn() };
           });
 
-          setMoveHistory((h) => [...h, san]);
+          if (san) setMoveHistory((h) => [...h, san]);
           lastUpdateRef.current = Date.now();
           break;
         }
 
         case "game_over":
           stopClock();
+          setDrawOfferPending(false);
+          setDrawOfferFromOpponent(false);
+          onSoundEvent?.("gameOver");
           setGameOverReason(message.payload.reason || "game_over");
           setGameState((p) => ({
             ...p,
@@ -274,6 +323,11 @@ export function useChessGame(socket: WebSocket | null, isConnected: boolean) {
     resign,
     resetGame,
     startMatchMaking,
+    offerDraw,
+    acceptDraw,
+    declineDraw,
+    drawOfferPending,
+    drawOfferFromOpponent,
     moveHistory,
     showMatchStartAnimation,
     gameOverReason,

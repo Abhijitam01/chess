@@ -2,14 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function useWebSocket(url: string) {
+export function useWebSocket(url: string, token?: string | null, onAuthError?: () => void) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (token === null) return; // explicitly no token — skip connection
+
     const connectWebSocket = () => {
-      const ws = new WebSocket(url);
+      const wsUrl = token ? `${url}?token=${token}` : url;
+      const ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data as string) as { type: string };
+          if (msg.type === "AUTH_ERROR" && onAuthError) {
+            onAuthError();
+          }
+        } catch {
+          // not JSON or not auth error — will be handled by game hook
+        }
+      };
 
       ws.onopen = () => {
         console.log("WebSocket connected");
@@ -41,9 +55,10 @@ export function useWebSocket(url: string) {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      ws.close();
+      ws?.close();
     };
-  }, [url]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, token]);
 
   const sendMessage = (message: unknown) => {
     if (socket && isConnected) {
