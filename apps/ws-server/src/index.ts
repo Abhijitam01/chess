@@ -1,19 +1,76 @@
-import { WebSocket, WebSocketServer } from "ws";
-import { GameManager } from "./GameManager";
+import http from "http";
+import { WebSocketServer } from "ws";
+import { config } from "./config.js";
+import { DatabaseService } from "./services/DatabaseService.js";
+import { RedisService } from "./services/RedisService.js";
+import { AuthService } from "./services/AuthService.js";
+import { createAuthHandler } from "./routes/auth.js";
+import { GameManager } from "./GameManager.js";
 
-const port = process.env.PORT ? Number(process.env.PORT) : 8080;
-const wss = new WebSocketServer({ port });
+async function main() {
+  const dbService = new DatabaseService();
+  const redisService = new RedisService();
+  const authService = new AuthService(dbService);
 
-const gameManager = new GameManager();
+  await redisService.connect();
 
-wss.on("connection", (ws: WebSocket , req: Request) => {
-  
-  const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-  gameManager.addUserToGame(ws, tempUserId);
+  const authHandler = createAuthHandler(authService, dbService, redisService);
+  const httpServer = http.createServer(authHandler);
+  const wss = new WebSocketServer({ server: httpServer });
+  const gameManager = new GameManager(dbService, redisService);
 
-  ws.on("close", () => {
-    gameManager.removeUserFromGame(ws);
+  wss.on("connection", (ws, req) => {
+    const url = new URL(req.url ?? "/", `http://localhost`);
+    const token = url.searchParams.get("token");
+    const spectateGameId = url.searchParams.get("spectate");
+
+    if (!token) {
+      ws.send(JSON.stringify({ type: "AUTH_ERROR", payload: { message: "Authentication required" } }));
+      ws.close(1008, "Authentication required");
+      return;
+    }
+
+    let userId: string;
+    try {
+      const payload = authService.verifyToken(token);
+      userId = payload.userId;
+    } catch {
+      ws.send(JSON.stringify({ type: "AUTH_ERROR", payload: { message: "Invalid or expired token" } }));
+      ws.close(1008, "Invalid token");
+      return;
+    }
+
+    if (spectateGameId) {
+      gameManager.addSpectator(spectateGameId, ws);
+      ws.on("close", () => {
+        gameManager.removeSpectator(spectateGameId, ws);
+      });
+      return;
+    }
+
+    gameManager.addUserToGame(ws, userId);
+
+    ws.on("close", () => {
+      gameManager.removeUserFromGame(ws);
+    });
   });
-});
 
-console.log(`WebSocket server listening on port ${port}`);
+  httpServer.listen(config.port, () => {
+    console.log(`Server listening on port ${config.port}`);
+  });
+
+  process.on("SIGTERM", async () => {
+    await redisService.disconnect();
+    process.exit(0);
+  });
+
+  process.on("SIGINT", async () => {
+    await redisService.disconnect();
+    process.exit(0);
+  });
+}
+
+main().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});
