@@ -8,6 +8,10 @@ export const OPONENT_LEFT = "opponent_left" as const;
 export const INVALID_MOVE = "invalid_move" as const;
 export const RESIGN = "resign" as const;
 export const TIME_UPDATE = "time_update" as const;
+export const DRAW_OFFER = "draw_offer" as const;
+export const DRAW_ACCEPT = "draw_accept" as const;
+export const DRAW_DECLINE = "draw_decline" as const;
+export const AUTH_ERROR = "AUTH_ERROR" as const;
 export interface OpponentLeftPayload {
   message: string;
 }
@@ -85,7 +89,9 @@ export type ServerMessage =
   | ServerOpponentLeftMessage
   | ServerResignMessage
   | ServerInvalidMoveMessage
-  | ServerTimeUpdateMessage;
+  | ServerTimeUpdateMessage
+  | ServerDrawOfferMessage
+  | ServerDrawDeclineMessage;
 
 export interface ClientInitGameMessage {
   type: typeof INIT_GAME;
@@ -103,7 +109,33 @@ export interface ClientResignMessage {
   type: typeof RESIGN;
 }
 
-export type ClientMessage = ClientInitGameMessage | ClientMoveMessage | ClientResignMessage;
+export interface ClientDrawOfferMessage {
+  type: typeof DRAW_OFFER;
+}
+
+export interface ClientDrawAcceptMessage {
+  type: typeof DRAW_ACCEPT;
+}
+
+export interface ClientDrawDeclineMessage {
+  type: typeof DRAW_DECLINE;
+}
+
+export interface ServerDrawOfferMessage {
+  type: typeof DRAW_OFFER;
+}
+
+export interface ServerDrawDeclineMessage {
+  type: typeof DRAW_DECLINE;
+}
+
+export type ClientMessage =
+  | ClientInitGameMessage
+  | ClientMoveMessage
+  | ClientResignMessage
+  | ClientDrawOfferMessage
+  | ClientDrawAcceptMessage
+  | ClientDrawDeclineMessage;
 
 export interface ClientTimeUpdateMessage {
   type: typeof TIME_UPDATE;
