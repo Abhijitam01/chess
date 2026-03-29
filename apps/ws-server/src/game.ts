@@ -16,7 +16,7 @@ import {
 const K_FACTOR = 32;
 const INITIAL_TIME_MS = 300_000; // 5 minutes
 
-function calcElo(playerRating: number, opponentRating: number, actual: 1 | 0 | 0.5): number {
+export function calcElo(playerRating: number, opponentRating: number, actual: 1 | 0 | 0.5): number {
   const expected = 1 / (1 + Math.pow(10, (opponentRating - playerRating) / 400));
   return Math.round(K_FACTOR * (actual - expected));
 }
@@ -39,6 +39,7 @@ export class Game {
   private redisService: RedisService;
   private finished = false;
   private pendingDrawFrom: WebSocket | null = null;
+  private onReady?: (gameId: string) => void;
 
   constructor(
     player1: WebSocket,
@@ -47,6 +48,7 @@ export class Game {
     blackPlayerId: string,
     dbService: DatabaseService,
     redisService: RedisService,
+    onReady?: (gameId: string) => void,
   ) {
     this.player1 = player1;
     this.player2 = player2;
@@ -56,6 +58,7 @@ export class Game {
     this.startTime = Date.now();
     this.dbService = dbService;
     this.redisService = redisService;
+    this.onReady = onReady;
 
     this.initializeGame();
   }
@@ -86,6 +89,10 @@ export class Game {
     return this.finished;
   }
 
+  getGameId(): string | undefined {
+    return this.gameId;
+  }
+
   private async initializeGame(): Promise<void> {
     try {
       // Load actual ratings
@@ -103,6 +110,7 @@ export class Game {
         this.blackRating,
       );
       this.gameId = game.id;
+      this.onReady?.(this.gameId);
 
       await this.redisService.initGame(
         this.gameId,
@@ -185,30 +193,30 @@ export class Game {
       const uci = `${moveResult.from}${moveResult.to}`;
       const fen = this.engine.getBoard().fen();
 
-      // Persist to DB and Redis in parallel
-      await Promise.all([
-        this.gameId
-          ? this.dbService.saveMove(
-              this.gameId,
-              this.engine.moveCount(),
-              moveResult.san,
-              uci,
-              fen,
-              this.whiteTime,
-              this.blackTime,
-            )
-          : Promise.resolve(),
-        this.gameId
-          ? this.redisService.publishMove(
-              this.gameId,
-              { san: moveResult.san, uci, fen, whiteTime: this.whiteTime, blackTime: this.blackTime, moveNumber: this.engine.moveCount() },
-              fen,
-              this.whiteTime,
-              this.blackTime,
-              this.engine.getTurn() as 'w' | 'b',
-            )
-          : Promise.resolve(),
-      ]);
+      // Publish to Redis (awaited — Redis is the source of truth for live state)
+      if (this.gameId) {
+        await this.redisService.publishMove(
+          this.gameId,
+          { san: moveResult.san, uci, fen, whiteTime: this.whiteTime, blackTime: this.blackTime, moveNumber: this.engine.moveCount() },
+          fen,
+          this.whiteTime,
+          this.blackTime,
+          this.engine.getTurn() as 'w' | 'b',
+        );
+      }
+
+      // Persist to DB fire-and-forget — DB is a secondary store, don't block the move ACK
+      if (this.gameId) {
+        this.dbService.saveMove(
+          this.gameId,
+          this.engine.moveCount(),
+          moveResult.san,
+          uci,
+          fen,
+          this.whiteTime,
+          this.blackTime,
+        ).catch((err) => console.error('[Game] saveMove failed:', err));
+      }
 
       // Broadcast move to both players
       const moveMsg = JSON.stringify({
@@ -349,12 +357,12 @@ export class Game {
 
   async respondDraw(socket: WebSocket, accept: boolean): Promise<void> {
     if (this.finished || !this.pendingDrawFrom || socket === this.pendingDrawFrom) return;
+    const offerer = this.pendingDrawFrom;
     this.pendingDrawFrom = null;
 
     if (accept) {
       await this.handleDrawAgreement();
     } else {
-      const offerer = this.pendingDrawFrom ?? socket;
       offerer.send(JSON.stringify({ type: DRAW_DECLINE }));
     }
   }

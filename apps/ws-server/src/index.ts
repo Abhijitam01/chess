@@ -59,15 +59,32 @@ async function main() {
     console.log(`Server listening on port ${config.port}`);
   });
 
-  process.on("SIGTERM", async () => {
-    await redisService.disconnect();
-    process.exit(0);
-  });
+  async function gracefulShutdown(signal: string): Promise<void> {
+    console.log(`[Server] ${signal} received — starting graceful shutdown`);
 
-  process.on("SIGINT", async () => {
+    // Stop accepting new WS and HTTP connections
+    wss.close();
+    httpServer.close();
+
+    // Notify all connected clients so they can reconnect to another node
+    const shutdownMsg = JSON.stringify({ type: "server_shutdown", payload: { message: "Server is restarting, please reconnect" } });
+    for (const client of wss.clients) {
+      if (client.readyState === client.OPEN) {
+        client.send(shutdownMsg);
+        client.close(1001, "Server shutting down");
+      }
+    }
+
+    // Give active games up to 30s to finish writing to Redis/DB
+    await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wss.clients.size > 0 ? 5000 : 0, 30000)));
+
     await redisService.disconnect();
+    console.log("[Server] Shutdown complete");
     process.exit(0);
-  });
+  }
+
+  process.on("SIGTERM", () => { gracefulShutdown("SIGTERM").catch(console.error); });
+  process.on("SIGINT",  () => { gracefulShutdown("SIGINT").catch(console.error); });
 }
 
 main().catch((err) => {

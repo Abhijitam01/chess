@@ -7,7 +7,10 @@
     "test-db": "tsx src/test-db.ts",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@chess/chess-engine": "workspace:*",
@@ -24,7 +27,9 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.3",
     "@types/ws": "^8.5.12",
+    "@vitest/coverage-v8": "^4.1.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.2"
   }
 }

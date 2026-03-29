@@ -56,9 +56,9 @@ export function createAuthHandler(
       return;
     }
 
-    // Health check
-    if (url === '/health' && method === 'GET') {
-      sendJson(res, 200, { success: true, data: { status: 'ok' } });
+    // Health check (both /health and /healthz for k8s liveness probes)
+    if ((url === '/health' || url === '/healthz') && method === 'GET') {
+      sendJson(res, 200, { success: true, data: { status: 'ok', ts: Date.now() } });
       return;
     }
 

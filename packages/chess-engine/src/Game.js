@@ -12,11 +12,11 @@ export class Game {
     }
     tryMove(move) {
         try {
-            this.board.move(move);
-            return true;
+            const result = this.board.move(move);
+            return result;
         }
         catch {
-            return false;
+            return null;
         }
     }
     isGameOver() {
@@ -26,9 +26,16 @@ export class Game {
         if (!this.board.isGameOver()) {
             return null;
         }
-        // In chess.js, turn() returns the side to move; after game over, the side
-        // that *cannot* move is the loser.
         return this.board.turn() === "w" ? "black" : "white";
+    }
+    moveCount() {
+        return this.board.history().length;
+    }
+    isCheckmate() {
+        return this.board.isCheckmate();
+    }
+    pgn() {
+        return this.board.pgn();
     }
 }
 export function createChess() {

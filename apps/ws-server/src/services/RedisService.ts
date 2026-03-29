@@ -3,6 +3,7 @@ import { config } from '../config.js';
 
 const GAME_TTL = 86400; // 24 hours
 const ACTIVE_GAMES_KEY = 'active_games';
+const MATCHMAKING_QUEUE_KEY = 'matchmaking:queue';
 
 export interface GameState {
   fen: string;
@@ -32,9 +33,26 @@ export interface LiveMoveEvent {
   turn: 'w' | 'b';
 }
 
+export interface MatchFoundNotification {
+  type: 'match_found';
+  gameId: string;
+  color: 'white' | 'black';
+  opponentId: string;
+  timeControl: { whiteTime: number; blackTime: number };
+}
+
+export type IncomingGameAction =
+  | { type: 'move'; userId: string; from: string; to: string; promotion?: string }
+  | { type: 'resign'; userId: string }
+  | { type: 'draw_offer'; userId: string }
+  | { type: 'draw_accept'; userId: string }
+  | { type: 'draw_decline'; userId: string };
+
 export class RedisService {
   private client: Redis;
   private subClient: Redis;
+  // Single generic dispatcher — maps channel → raw message handler
+  private channelHandlers = new Map<string, (raw: string) => void>();
 
   constructor() {
     this.client = new Redis(config.redisUrl, {
@@ -53,6 +71,18 @@ export class RedisService {
 
     this.subClient.on('error', (err) => {
       console.error('[Redis] sub error:', err.message);
+    });
+
+    // Single top-level dispatcher — registered once, never duplicated
+    this.subClient.on('message', (channel, raw) => {
+      const handler = this.channelHandlers.get(channel);
+      if (handler) {
+        try {
+          handler(raw);
+        } catch {
+          // ignore malformed messages
+        }
+      }
     });
   }
 
@@ -152,25 +182,136 @@ export class RedisService {
     ]);
   }
 
+  // ── Spectator: live move events ──────────────────────────────────────────
+
   subscribeToGame(gameId: string, callback: (event: LiveMoveEvent) => void): void {
     const channel = `game:${gameId}:live`;
+    this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as LiveMoveEvent));
     this.subClient.subscribe(channel).catch((err) => {
       console.error(`[Redis] failed to subscribe to ${channel}:`, err);
-    });
-    this.subClient.on('message', (ch, message) => {
-      if (ch === channel) {
-        try {
-          callback(JSON.parse(message) as LiveMoveEvent);
-        } catch {
-          // ignore malformed messages
-        }
-      }
     });
   }
 
   unsubscribeFromGame(gameId: string): void {
-    this.subClient.unsubscribe(`game:${gameId}:live`).catch(() => {
-      // ignore
+    const channel = `game:${gameId}:live`;
+    this.channelHandlers.delete(channel);
+    this.subClient.unsubscribe(channel).catch(() => {});
+  }
+
+  // ── Matchmaking queue ─────────────────────────────────────────────────────
+
+  async enqueueForMatchmaking(userId: string): Promise<void> {
+    // Remove any stale entry first to avoid duplicates
+    await this.client.lrem(MATCHMAKING_QUEUE_KEY, 0, userId);
+    await this.client.lpush(MATCHMAKING_QUEUE_KEY, userId);
+  }
+
+  async removeFromMatchmaking(userId: string): Promise<void> {
+    await this.client.lrem(MATCHMAKING_QUEUE_KEY, 0, userId);
+  }
+
+  /**
+   * Atomically pop a pair of users from the queue.
+   * Returns [user1, user2] if two are available, null otherwise.
+   */
+  async tryDequeueMatchedPair(): Promise<[string, string] | null> {
+    const script = `
+      local count = redis.call('LLEN', KEYS[1])
+      if count >= 2 then
+        local u1 = redis.call('rpop', KEYS[1])
+        local u2 = redis.call('rpop', KEYS[1])
+        return {u1, u2}
+      end
+      return nil
+    `;
+    const result = await this.client.eval(script, 1, MATCHMAKING_QUEUE_KEY) as string[] | null;
+    if (!result || result.length < 2 || !result[0] || !result[1]) return null;
+    return [result[0], result[1]];
+  }
+
+  // ── User notification channels (cross-node match signalling) ─────────────
+
+  subscribeToUserNotify(userId: string, callback: (msg: MatchFoundNotification) => void): void {
+    const channel = `user:${userId}:notify`;
+    this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as MatchFoundNotification));
+    this.subClient.subscribe(channel).catch((err) => {
+      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
     });
+  }
+
+  unsubscribeFromUserNotify(userId: string): void {
+    const channel = `user:${userId}:notify`;
+    this.channelHandlers.delete(channel);
+    this.subClient.unsubscribe(channel).catch(() => {});
+  }
+
+  async publishToUser(userId: string, msg: MatchFoundNotification): Promise<void> {
+    await this.client.publish(`user:${userId}:notify`, JSON.stringify(msg));
+  }
+
+  // ── Cross-node move routing ───────────────────────────────────────────────
+
+  /**
+   * Non-owner nodes publish incoming moves here.
+   * The game-owner node processes them and publishes results to game:{id}:events.
+   */
+  async publishMoveToGame(gameId: string, action: IncomingGameAction): Promise<void> {
+    await this.client.publish(`game:${gameId}:moves_in`, JSON.stringify(action));
+  }
+
+  subscribeToGameMovesIn(gameId: string, callback: (action: IncomingGameAction) => void): void {
+    const channel = `game:${gameId}:moves_in`;
+    this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as IncomingGameAction));
+    this.subClient.subscribe(channel).catch((err) => {
+      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+    });
+  }
+
+  unsubscribeFromGameMovesIn(gameId: string): void {
+    const channel = `game:${gameId}:moves_in`;
+    this.channelHandlers.delete(channel);
+    this.subClient.unsubscribe(channel).catch(() => {});
+  }
+
+  /**
+   * Game owner publishes processed game events (moves, game_over, time_update).
+   * All nodes with local sockets for a game subscribe here to forward events.
+   */
+  async publishGameEvent(gameId: string, event: Record<string, unknown>): Promise<void> {
+    await this.client.publish(`game:${gameId}:events`, JSON.stringify(event));
+  }
+
+  subscribeToGameEvents(gameId: string, callback: (event: Record<string, unknown>) => void): void {
+    const channel = `game:${gameId}:events`;
+    this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as Record<string, unknown>));
+    this.subClient.subscribe(channel).catch((err) => {
+      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+    });
+  }
+
+  unsubscribeFromGameEvents(gameId: string): void {
+    const channel = `game:${gameId}:events`;
+    this.channelHandlers.delete(channel);
+    this.subClient.unsubscribe(channel).catch(() => {});
+  }
+
+  // ── Direct game messages to a specific user (cross-node INIT_GAME, etc.) ──
+
+  async publishGameMessageToUser(userId: string, message: string): Promise<void> {
+    await this.client.publish(`user:${userId}:game_msg`, message);
+  }
+
+  subscribeToUserGameMessages(userId: string, callback: (msg: string) => void): void {
+    const channel = `user:${userId}:game_msg`;
+    this.channelHandlers.set(channel, callback);
+    this.subClient.subscribe(channel).catch((err) => {
+      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+    });
+  }
+
+  unsubscribeFromUserGameMessages(userId: string): void {
+    const channel = `user:${userId}:game_msg`;
+    this.channelHandlers.delete(channel);
+    this.subClient.unsubscribe(channel).catch(() => {});
   }
 }
