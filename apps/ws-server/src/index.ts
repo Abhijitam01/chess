@@ -6,6 +6,7 @@ import { RedisService } from "./services/RedisService.js";
 import { AuthService } from "./services/AuthService.js";
 import { createAuthHandler } from "./routes/auth.js";
 import { GameManager } from "./GameManager.js";
+import { logger } from "./logger.js";
 
 async function main() {
   const dbService = new DatabaseService();
@@ -56,11 +57,11 @@ async function main() {
   });
 
   httpServer.listen(config.port, () => {
-    console.log(`Server listening on port ${config.port}`);
+    logger.info(`Server listening on port ${config.port}`);
   });
 
   async function gracefulShutdown(signal: string): Promise<void> {
-    console.log(`[Server] ${signal} received — starting graceful shutdown`);
+    logger.info(`[Server] ${signal} received — starting graceful shutdown`);
 
     // Stop accepting new WS and HTTP connections
     wss.close();
@@ -79,15 +80,15 @@ async function main() {
     await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wss.clients.size > 0 ? 5000 : 0, 30000)));
 
     await redisService.disconnect();
-    console.log("[Server] Shutdown complete");
+    logger.info("[Server] Shutdown complete");
     process.exit(0);
   }
 
-  process.on("SIGTERM", () => { gracefulShutdown("SIGTERM").catch(console.error); });
-  process.on("SIGINT",  () => { gracefulShutdown("SIGINT").catch(console.error); });
+  process.on("SIGTERM", () => { gracefulShutdown("SIGTERM").catch((err) => logger.error({ err }, 'SIGTERM handler failed')); });
+  process.on("SIGINT",  () => { gracefulShutdown("SIGINT").catch((err) => logger.error({ err }, 'SIGINT handler failed')); });
 }
 
 main().catch((err) => {
-  console.error("Failed to start server:", err);
+  logger.error({ err }, "Failed to start server");
   process.exit(1);
 });

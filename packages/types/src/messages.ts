@@ -12,6 +12,35 @@ export const DRAW_OFFER = "draw_offer" as const;
 export const DRAW_ACCEPT = "draw_accept" as const;
 export const DRAW_DECLINE = "draw_decline" as const;
 export const AUTH_ERROR = "AUTH_ERROR" as const;
+export const CREATE_LOBBY = "create_lobby" as const;
+export const JOIN_LOBBY = "join_lobby" as const;
+export const LOBBY_CREATED = "lobby_created" as const;
+export const LOBBY_NOT_FOUND = "lobby_not_found" as const;
+export const CLOCK_SYNC = "clock_sync" as const;
+
+// ── Time controls ─────────────────────────────────────────────────────────────
+
+export type TimeControlKey = 'bullet' | 'blitz' | 'rapid' | 'classical';
+
+export interface TimeControl {
+  label: string;
+  initialTimeMs: number;
+}
+
+export const TIME_CONTROLS: Record<TimeControlKey, TimeControl> = {
+  bullet:    { label: 'Bullet (1 min)',    initialTimeMs: 60_000 },
+  blitz:     { label: 'Blitz (5 min)',     initialTimeMs: 300_000 },
+  rapid:     { label: 'Rapid (10 min)',    initialTimeMs: 600_000 },
+  classical: { label: 'Classical (30 min)', initialTimeMs: 1_800_000 },
+};
+
+/** Default time control used when none is specified. */
+export const DEFAULT_TIME_CONTROL: TimeControlKey = 'blitz';
+
+export interface ClientClockSyncMessage {
+  type: typeof CLOCK_SYNC;
+  payload: { whiteTime: number; blackTime: number; serverTs: number };
+}
 export interface OpponentLeftPayload {
   message: string;
 }
@@ -82,6 +111,11 @@ export interface ServerOpponentLeftMessage {
   payload: OpponentLeftPayload;
 }
 
+export interface ServerClockSyncMessage {
+  type: typeof CLOCK_SYNC;
+  payload: { whiteTime: number; blackTime: number; serverTs: number };
+}
+
 export type ServerMessage =
   | ServerInitGameMessage
   | ServerMoveMessage
@@ -91,7 +125,10 @@ export type ServerMessage =
   | ServerInvalidMoveMessage
   | ServerTimeUpdateMessage
   | ServerDrawOfferMessage
-  | ServerDrawDeclineMessage;
+  | ServerDrawDeclineMessage
+  | ServerLobbyCreatedMessage
+  | ServerLobbyNotFoundMessage
+  | ServerClockSyncMessage;
 
 export interface ClientInitGameMessage {
   type: typeof INIT_GAME;
@@ -129,13 +166,33 @@ export interface ServerDrawDeclineMessage {
   type: typeof DRAW_DECLINE;
 }
 
+export interface ClientCreateLobbyMessage {
+  type: typeof CREATE_LOBBY;
+}
+
+export interface ClientJoinLobbyMessage {
+  type: typeof JOIN_LOBBY;
+  code: string;
+}
+
+export interface ServerLobbyCreatedMessage {
+  type: typeof LOBBY_CREATED;
+  payload: { code: string };
+}
+
+export interface ServerLobbyNotFoundMessage {
+  type: typeof LOBBY_NOT_FOUND;
+}
+
 export type ClientMessage =
   | ClientInitGameMessage
   | ClientMoveMessage
   | ClientResignMessage
   | ClientDrawOfferMessage
   | ClientDrawAcceptMessage
-  | ClientDrawDeclineMessage;
+  | ClientDrawDeclineMessage
+  | ClientCreateLobbyMessage
+  | ClientJoinLobbyMessage;
 
 export interface ClientTimeUpdateMessage {
   type: typeof TIME_UPDATE;

@@ -8,6 +8,10 @@ export declare class Game {
     tryMove(move: MovePayload): boolean;
     isGameOver(): boolean;
     getWinner(): Color | null;
+    moveCount(): number;
+    isCheckmate(): boolean;
+    isStalemate(): boolean;
+    pgn(): string;
 }
 export declare function createChess(): Chess;
 //# sourceMappingURL=Game.d.ts.map

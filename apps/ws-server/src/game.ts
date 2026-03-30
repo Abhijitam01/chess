@@ -2,19 +2,24 @@ import { WebSocket } from "ws";
 import { Game as ChessGame } from "@chess/chess-engine";
 import { DatabaseService } from "./services/DatabaseService.js";
 import { RedisService } from "./services/RedisService.js";
+import { logger } from "./logger.js";
 import {
   GAME_OVER,
   TIME_UPDATE,
+  CLOCK_SYNC,
   INIT_GAME,
   INVALID_MOVE,
   MOVE,
   DRAW_OFFER,
   DRAW_DECLINE,
+  TIME_CONTROLS,
+  DEFAULT_TIME_CONTROL,
+  type TimeControlKey,
   type MovePayload,
 } from "@repo/types";
 
 const K_FACTOR = 32;
-const INITIAL_TIME_MS = 300_000; // 5 minutes
+const CLOCK_SYNC_INTERVAL_MS = 3_000;
 
 export function calcElo(playerRating: number, opponentRating: number, actual: 1 | 0 | 0.5): number {
   const expected = 1 / (1 + Math.pow(10, (opponentRating - playerRating) / 400));
@@ -26,10 +31,11 @@ export class Game {
   public player2: WebSocket;
   public engine: ChessGame;
   private startTime: number;
-  private whiteTime: number = INITIAL_TIME_MS;
-  private blackTime: number = INITIAL_TIME_MS;
+  private whiteTime: number;
+  private blackTime: number;
   private lastMoveTime: number = Date.now();
   private clockInterval: NodeJS.Timeout | null = null;
+  private clockSyncInterval: NodeJS.Timeout | null = null;
   private gameId?: string;
   readonly whitePlayerId: string;
   readonly blackPlayerId: string;
@@ -49,6 +55,7 @@ export class Game {
     dbService: DatabaseService,
     redisService: RedisService,
     onReady?: (gameId: string) => void,
+    timeControl: TimeControlKey = DEFAULT_TIME_CONTROL,
   ) {
     this.player1 = player1;
     this.player2 = player2;
@@ -59,6 +66,10 @@ export class Game {
     this.dbService = dbService;
     this.redisService = redisService;
     this.onReady = onReady;
+
+    const initialTimeMs = TIME_CONTROLS[timeControl].initialTimeMs;
+    this.whiteTime = initialTimeMs;
+    this.blackTime = initialTimeMs;
 
     this.initializeGame();
   }
@@ -83,6 +94,13 @@ export class Game {
       },
     });
     socket.send(state);
+
+    // Send immediate clock sync so the reconnecting client doesn't wait up to 3s
+    const sync = JSON.stringify({
+      type: CLOCK_SYNC,
+      payload: { whiteTime: this.whiteTime, blackTime: this.blackTime, serverTs: Date.now() },
+    });
+    socket.send(sync);
   }
 
   isFinished(): boolean {
@@ -128,8 +146,9 @@ export class Game {
       this.player2.send(blackMsg);
 
       this.startClock();
+      this.startClockSync();
     } catch (e) {
-      console.error('Failed to initialize game:', e);
+      logger.error({ err: e }, 'Failed to initialize game');
     }
   }
 
@@ -168,10 +187,26 @@ export class Game {
     this.player2.send(msg);
   }
 
+  private startClockSync(): void {
+    this.clockSyncInterval = setInterval(() => {
+      if (this.finished) return;
+      const msg = JSON.stringify({
+        type: CLOCK_SYNC,
+        payload: { whiteTime: this.whiteTime, blackTime: this.blackTime, serverTs: Date.now() },
+      });
+      this.player1.send(msg);
+      this.player2.send(msg);
+    }, CLOCK_SYNC_INTERVAL_MS);
+  }
+
   private stopClock(): void {
     if (this.clockInterval) {
       clearInterval(this.clockInterval);
       this.clockInterval = null;
+    }
+    if (this.clockSyncInterval) {
+      clearInterval(this.clockSyncInterval);
+      this.clockSyncInterval = null;
     }
   }
 
@@ -215,7 +250,7 @@ export class Game {
           fen,
           this.whiteTime,
           this.blackTime,
-        ).catch((err) => console.error('[Game] saveMove failed:', err));
+        ).catch((err) => logger.error({ err }, '[Game] saveMove failed'));
       }
 
       // Broadcast move to both players
@@ -235,7 +270,7 @@ export class Game {
         await this.handleGameOver();
       }
     } catch (e) {
-      console.error('Error in makeMove:', e);
+      logger.error({ err: e }, 'Error in makeMove');
     }
   }
 
@@ -249,6 +284,9 @@ export class Game {
     if (this.engine.isCheckmate()) {
       winner = this.engine.getTurn() === 'w' ? 'black' : 'white';
       reason = 'checkmate';
+    } else if (this.engine.isStalemate()) {
+      winner = null;
+      reason = 'stalemate';
     }
 
     const { whiteChange, blackChange } = this.calcRatingChanges(winner);
@@ -273,7 +311,7 @@ export class Game {
 
       await Promise.all(updates);
     } catch (err) {
-      console.error('Failed to save game result:', err);
+      logger.error({ err }, 'Failed to save game result');
     }
 
     const gameOverMsg = JSON.stringify({
@@ -310,7 +348,7 @@ export class Game {
 
       await Promise.all(updates);
     } catch (err) {
-      console.error('Failed to save timeout result:', err);
+      logger.error({ err }, 'Failed to save timeout result');
     }
 
     const gameOverMsg = JSON.stringify({
@@ -344,7 +382,7 @@ export class Game {
         this.redisService.finishGame(this.gameId, this.whitePlayerId, this.blackPlayerId),
         this.dbService.updateProfileStats(this.whitePlayerId, whiteChange, whiteOutcome),
         this.dbService.updateProfileStats(this.blackPlayerId, blackChange, blackOutcome),
-      ]).catch((err) => console.error('Failed to save resignation:', err));
+      ]).catch((err) => logger.error({ err }, 'Failed to save resignation'));
     }
   }
 
@@ -387,7 +425,7 @@ export class Game {
       );
       await Promise.all(updates);
     } catch (err) {
-      console.error('Failed to save draw agreement:', err);
+      logger.error({ err }, 'Failed to save draw agreement');
     }
 
     const msg = JSON.stringify({

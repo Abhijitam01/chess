@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { config } from '../config.js';
+import { logger } from '../logger.js';
 
 const GAME_TTL = 86400; // 24 hours
 const ACTIVE_GAMES_KEY = 'active_games';
@@ -66,11 +67,11 @@ export class RedisService {
     });
 
     this.client.on('error', (err) => {
-      console.error('[Redis] client error:', err.message);
+      logger.error({ err }, '[Redis] client error');
     });
 
     this.subClient.on('error', (err) => {
-      console.error('[Redis] sub error:', err.message);
+      logger.error({ err }, '[Redis] sub error');
     });
 
     // Single top-level dispatcher — registered once, never duplicated
@@ -92,6 +93,10 @@ export class RedisService {
 
   async disconnect(): Promise<void> {
     await Promise.all([this.client.quit(), this.subClient.quit()]);
+  }
+
+  async ping(): Promise<string> {
+    return this.client.ping();
   }
 
   async initGame(
@@ -188,7 +193,7 @@ export class RedisService {
     const channel = `game:${gameId}:live`;
     this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as LiveMoveEvent));
     this.subClient.subscribe(channel).catch((err) => {
-      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+      logger.error({ err, channel }, '[Redis] failed to subscribe');
     });
   }
 
@@ -235,7 +240,7 @@ export class RedisService {
     const channel = `user:${userId}:notify`;
     this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as MatchFoundNotification));
     this.subClient.subscribe(channel).catch((err) => {
-      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+      logger.error({ err, channel }, '[Redis] failed to subscribe');
     });
   }
 
@@ -263,7 +268,7 @@ export class RedisService {
     const channel = `game:${gameId}:moves_in`;
     this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as IncomingGameAction));
     this.subClient.subscribe(channel).catch((err) => {
-      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+      logger.error({ err, channel }, '[Redis] failed to subscribe');
     });
   }
 
@@ -285,7 +290,7 @@ export class RedisService {
     const channel = `game:${gameId}:events`;
     this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as Record<string, unknown>));
     this.subClient.subscribe(channel).catch((err) => {
-      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+      logger.error({ err, channel }, '[Redis] failed to subscribe');
     });
   }
 
@@ -293,6 +298,35 @@ export class RedisService {
     const channel = `game:${gameId}:events`;
     this.channelHandlers.delete(channel);
     this.subClient.unsubscribe(channel).catch(() => {});
+  }
+
+  // ── Private lobby ─────────────────────────────────────────────────────────
+
+  /**
+   * Store a lobby code → creatorId with 10-minute TTL.
+   * Uses NX so two colliding codes don't overwrite each other.
+   * Returns true if the key was set, false if a collision occurred.
+   */
+  async createLobby(code: string, creatorId: string): Promise<boolean> {
+    const result = await this.client.set(`lobby:${code}`, creatorId, 'EX', 600, 'NX');
+    return result === 'OK';
+  }
+
+  /**
+   * Atomically GET the creatorId and DELETE the lobby key.
+   * Returns the creatorId, or null if the code is unknown/expired.
+   */
+  async popLobby(code: string): Promise<string | null> {
+    const script = `
+      local v = redis.call('GET', KEYS[1])
+      if v then
+        redis.call('DEL', KEYS[1])
+        return v
+      end
+      return nil
+    `;
+    const result = await this.client.eval(script, 1, `lobby:${code}`);
+    return typeof result === 'string' ? result : null;
   }
 
   // ── Direct game messages to a specific user (cross-node INIT_GAME, etc.) ──
@@ -305,7 +339,7 @@ export class RedisService {
     const channel = `user:${userId}:game_msg`;
     this.channelHandlers.set(channel, callback);
     this.subClient.subscribe(channel).catch((err) => {
-      console.error(`[Redis] failed to subscribe to ${channel}:`, err);
+      logger.error({ err, channel }, '[Redis] failed to subscribe');
     });
   }
 

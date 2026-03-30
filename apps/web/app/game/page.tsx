@@ -10,6 +10,7 @@ import { Sidebar } from "../../components/Sidebar";
 import { useRouter } from "next/navigation";
 import { ChessClock } from "../../components/ChessClock";
 import { MatchmakingButton } from "../../components/MatchMakingButton";
+import { LobbyModal } from "../../components/LobbyModal";
 import { useAuth } from "../../hooks/useAuth";
 import { useThemeContext } from "../../context/ThemeContext";
 import { useSound } from "../../hooks/useSound";
@@ -55,6 +56,14 @@ export default function Game() {
     declineDraw,
     drawOfferPending,
     drawOfferFromOpponent,
+    showLobbyModal,
+    lobbyMode,
+    lobbyCode,
+    lobbyError,
+    openLobbyModal,
+    closeLobbyModal,
+    createLobby,
+    joinLobby,
   } = useChessGame(socket, isConnected, playSound);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
@@ -210,6 +219,16 @@ export default function Game() {
             isConnected={isConnected}
           />
 
+          {matchMakingStatus === 'idle' && (
+            <button
+              onClick={openLobbyModal}
+              disabled={!isConnected}
+              className="w-full px-4 py-3 rounded-xl border border-white/10 text-zinc-300 hover:text-zinc-100 hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold transition-colors"
+            >
+              Challenge a Friend
+            </button>
+          )}
+
           <div className="flex flex-col flex-1 min-h-0 bg-white/[0.02] rounded-xl border border-white/5 overflow-hidden">
             <div className="p-3 border-b border-white/5 flex items-center justify-between text-xs uppercase tracking-wider font-bold text-text-muted">
               <span>Move History</span>
@@ -227,6 +246,15 @@ export default function Game() {
       </main>
 
 
+      <LobbyModal
+        show={showLobbyModal}
+        mode={lobbyMode}
+        lobbyCode={lobbyCode}
+        lobbyError={lobbyError}
+        onClose={closeLobbyModal}
+        onCreateLobby={createLobby}
+        onJoinLobby={joinLobby}
+      />
     </div>
   );
 }

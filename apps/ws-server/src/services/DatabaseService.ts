@@ -1,6 +1,10 @@
 import { prisma } from "@repo/db";
 
 export class DatabaseService {
+  async ping(): Promise<void> {
+    await prisma.$queryRaw`SELECT 1`;
+  }
+
   // ── Auth ────────────────────────────────────────────────────────────────────
 
   async createProfileWithCredentials(username: string, passwordHash: string) {
@@ -26,6 +30,11 @@ export class DatabaseService {
 
   async getProfileById(userId: string) {
     return prisma.profile.findUnique({ where: { id: userId } });
+  }
+
+  async getProfilesByIds(userIds: string[]) {
+    const rows = await prisma.profile.findMany({ where: { id: { in: userIds } } });
+    return Object.fromEntries(rows.map((r) => [r.id, r]));
   }
 
   async updateProfileStats(

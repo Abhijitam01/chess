@@ -164,18 +164,22 @@ export default function ProfilePage() {
                   : game.whitePlayer?.username;
               const ratingDelta = result.ratingChange;
               return (
-                <div key={game.id} className="flex items-center justify-between py-3 px-4">
+                <Link
+                  key={game.id}
+                  href={`/game/${game.id}`}
+                  className="flex items-center justify-between py-3 px-4 hover:bg-white/[0.03] transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <span className={`text-sm font-bold w-10 ${result.color}`}>{result.label}</span>
                     <div>
                       <div className="text-sm text-text-primary">
                         vs{" "}
-                        <Link
-                          href={`/profile/${encodeURIComponent(opponent ?? "Unknown")}`}
-                          className="hover:text-accent-primary transition-colors"
+                        <span
+                          onClick={(e) => { e.preventDefault(); }}
+                          className="hover:text-accent-primary transition-colors cursor-pointer"
                         >
                           {opponent ?? "Unknown"}
-                        </Link>
+                        </span>
                       </div>
                       <div className="text-xs text-text-muted capitalize">
                         {game.resultReason ?? "unknown"}
@@ -185,7 +189,7 @@ export default function ProfilePage() {
                   <div className={`text-sm font-mono font-bold ${ratingDelta >= 0 ? "text-accent-emerald" : "text-accent-danger"}`}>
                     {ratingDelta >= 0 ? "+" : ""}{ratingDelta}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

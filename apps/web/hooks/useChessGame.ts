@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createChess } from "@chess/chess-engine";
-import { ServerMessage, ClientMessage, DRAW_OFFER, DRAW_ACCEPT, DRAW_DECLINE } from "@repo/types";
+import { ServerMessage, ClientMessage, DRAW_OFFER, DRAW_ACCEPT, DRAW_DECLINE, CREATE_LOBBY, JOIN_LOBBY, CLOCK_SYNC } from "@repo/types";
 
 type GameStatus = "waiting" | "playing" | "finished";
 type PlayerColor = "white" | "black" | null;
@@ -45,6 +45,13 @@ export function useChessGame(
   const [drawOfferFromOpponent, setDrawOfferFromOpponent] = useState(false);
   const [drawOfferPending, setDrawOfferPending] = useState(false);
 
+  // Lobby state
+  type LobbyMode = 'menu' | 'creating' | 'waiting' | 'joining' | 'error';
+  const [showLobbyModal, setShowLobbyModal] = useState(false);
+  const [lobbyMode, setLobbyMode] = useState<LobbyMode>('menu');
+  const [lobbyCode, setLobbyCode] = useState<string | null>(null);
+  const [lobbyError, setLobbyError] = useState<string | null>(null);
+
   const timerRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
   const timeoutSentRef = useRef(false);
@@ -69,6 +76,32 @@ export function useChessGame(
     setGameState((p) => ({ ...p, matchMakingStatus: "finding" }));
     socket?.send(JSON.stringify({ type: "init_game" }));
   };
+
+  const openLobbyModal = useCallback(() => {
+    setLobbyMode('menu');
+    setLobbyCode(null);
+    setLobbyError(null);
+    setShowLobbyModal(true);
+  }, []);
+
+  const closeLobbyModal = useCallback(() => {
+    setShowLobbyModal(false);
+    setLobbyMode('menu');
+    setLobbyCode(null);
+    setLobbyError(null);
+  }, []);
+
+  const createLobby = useCallback(() => {
+    if (!socket || !isConnected) return;
+    setLobbyMode('creating');
+    socket.send(JSON.stringify({ type: CREATE_LOBBY }));
+  }, [socket, isConnected]);
+
+  const joinLobby = useCallback((code: string) => {
+    if (!socket || !isConnected) return;
+    setLobbyMode('joining');
+    socket.send(JSON.stringify({ type: JOIN_LOBBY, code }));
+  }, [socket, isConnected]);
 
   const resign = () => {
     if (!socket || !isConnected) return;
@@ -219,6 +252,7 @@ export function useChessGame(
           setDrawOfferFromOpponent(false);
           setMoveHistory([]);
           setShowMatchStartAnimation(true);
+          setShowLobbyModal(false);
           onSoundEvent?.("start");
 
           const wt = message.payload.timeControl?.whiteTime ?? 300000;
@@ -298,6 +332,30 @@ export function useChessGame(
           });
           lastUpdateRef.current = Date.now();
           break;
+
+        case CLOCK_SYNC: {
+          // Resync only if local clock has drifted more than 500ms from server
+          const { whiteTime: sWhite, blackTime: sBlack } = message.payload;
+          setTimeState((prev) => {
+            const whiteDrift = Math.abs(prev.whiteTime - sWhite);
+            const blackDrift = Math.abs(prev.blackTime - sBlack);
+            if (whiteDrift > 500 || blackDrift > 500) {
+              return { whiteTime: sWhite, blackTime: sBlack };
+            }
+            return prev;
+          });
+          break;
+        }
+
+        case "lobby_created":
+          setLobbyCode(message.payload.code);
+          setLobbyMode('waiting');
+          break;
+
+        case "lobby_not_found":
+          setLobbyError('Lobby not found or expired. Check the code and try again.');
+          setLobbyMode('error');
+          break;
       }
     };
 
@@ -333,5 +391,14 @@ export function useChessGame(
     gameOverReason,
     isMyTurn,
     onMatchAnimationComplete: () => setShowMatchStartAnimation(false),
+    // Lobby
+    showLobbyModal,
+    lobbyMode,
+    lobbyCode,
+    lobbyError,
+    openLobbyModal,
+    closeLobbyModal,
+    createLobby,
+    joinLobby,
   };
 }

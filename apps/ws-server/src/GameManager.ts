@@ -1,9 +1,17 @@
+import { webcrypto } from "crypto";
 import { WebSocket } from "ws";
 import { z } from "zod";
 import { Game } from "./game.js";
-import { INIT_GAME, MOVE, RESIGN, DRAW_OFFER, DRAW_ACCEPT, DRAW_DECLINE, type ClientMessage } from "@repo/types";
+import {
+  INIT_GAME, MOVE, RESIGN, DRAW_OFFER, DRAW_ACCEPT, DRAW_DECLINE,
+  CREATE_LOBBY, JOIN_LOBBY, LOBBY_CREATED, LOBBY_NOT_FOUND,
+  TIME_CONTROLS, DEFAULT_TIME_CONTROL,
+  type TimeControlKey,
+  type ClientMessage,
+} from "@repo/types";
 import { DatabaseService } from "./services/DatabaseService.js";
 import { RedisService, type MatchFoundNotification, type IncomingGameAction } from "./services/RedisService.js";
+import { logger } from "./logger.js";
 
 // ── Input validation schemas ─────────────────────────────────────────────────
 
@@ -20,6 +28,8 @@ const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal(DRAW_OFFER) }),
   z.object({ type: z.literal(DRAW_ACCEPT) }),
   z.object({ type: z.literal(DRAW_DECLINE) }),
+  z.object({ type: z.literal(CREATE_LOBBY) }),
+  z.object({ type: z.literal(JOIN_LOBBY), code: z.string().length(6).regex(/^[0-9a-f]{6}$/) }),
 ]);
 
 // ── Rate limiter (token bucket, 10 msgs/s per socket) ───────────────────────
@@ -32,7 +42,6 @@ interface RateBucket {
 
 const RATE_LIMIT = 10;
 const OVERAGE_CLOSE_THRESHOLD = 5;
-const INITIAL_TIME_MS = 300_000; // must match game.ts
 
 // ── Remote player proxy ──────────────────────────────────────────────────────
 // Implements just enough of the WebSocket interface for Game to route messages
@@ -48,7 +57,7 @@ class RemotePlayerProxy {
 
   send(data: string): void {
     this.redis.publishGameMessageToUser(this.userId, data).catch((err) =>
-      console.error(`[RemotePlayerProxy] send failed for ${this.userId}:`, err),
+      logger.error({ err, userId: this.userId }, '[RemotePlayerProxy] send failed'),
     );
   }
 }
@@ -245,6 +254,14 @@ export class GameManager {
           }
           break;
         }
+
+        case CREATE_LOBBY:
+          await this.handleCreateLobby(socket, userId);
+          break;
+
+        case JOIN_LOBBY:
+          await this.handleJoinLobby(socket, userId, message.code);
+          break;
       }
     });
   }
@@ -280,12 +297,12 @@ export class GameManager {
     const pair = await this.redisService.tryDequeueMatchedPair();
     if (pair) {
       const [userA, userB] = pair;
-      await this.createGameForMatch(userA, userB);
+      await this.createGameForMatch(userA, userB, DEFAULT_TIME_CONTROL);
     } else {
       // Wait for a cross-node match_found notification
       this.redisService.subscribeToUserNotify(userId, (notification) => {
         this.handleMatchNotification(userId, notification).catch((err) =>
-          console.error("[GameManager] handleMatchNotification error:", err),
+          logger.error({ err, userId }, '[GameManager] handleMatchNotification error'),
         );
       });
     }
@@ -295,7 +312,11 @@ export class GameManager {
    * This node won the race and will own the game.
    * Either or both players may have sockets on remote nodes.
    */
-  private async createGameForMatch(whiteUserId: string, blackUserId: string): Promise<void> {
+  private async createGameForMatch(
+    whiteUserId: string,
+    blackUserId: string,
+    timeControl: TimeControlKey = DEFAULT_TIME_CONTROL,
+  ): Promise<void> {
     const whiteSocket = this.userIdToSocket.get(whiteUserId);
     const blackSocket = this.userIdToSocket.get(blackUserId);
 
@@ -312,7 +333,8 @@ export class GameManager {
       this.dbService,
       this.redisService,
       (gameId) =>
-        this.onGameReady(gameId, game, whiteUserId, blackUserId, !!whiteSocket, !!blackSocket),
+        this.onGameReady(gameId, game, whiteUserId, blackUserId, !!whiteSocket, !!blackSocket, timeControl),
+      timeControl,
     );
 
     this.games.push(game);
@@ -331,11 +353,13 @@ export class GameManager {
     blackUserId: string,
     whiteIsLocal: boolean,
     blackIsLocal: boolean,
+    timeControl: TimeControlKey = DEFAULT_TIME_CONTROL,
   ): void {
+    const initialTimeMs = TIME_CONTROLS[timeControl].initialTimeMs;
     // Subscribe to incoming actions from remote nodes
     this.redisService.subscribeToGameMovesIn(gameId, (action) => {
       this.handleIncomingAction(action, game).catch((err) =>
-        console.error("[GameManager] handleIncomingAction error:", err),
+        logger.error({ err, gameId }, '[GameManager] handleIncomingAction error'),
       );
     });
 
@@ -347,9 +371,9 @@ export class GameManager {
           gameId,
           color: "white",
           opponentId: blackUserId,
-          timeControl: { whiteTime: INITIAL_TIME_MS, blackTime: INITIAL_TIME_MS },
+          timeControl: { whiteTime: initialTimeMs, blackTime: initialTimeMs },
         })
-        .catch(console.error);
+        .catch((err) => logger.error({ err }, '[GameManager] publishToUser failed'));
     }
     if (!blackIsLocal) {
       this.redisService
@@ -358,9 +382,9 @@ export class GameManager {
           gameId,
           color: "black",
           opponentId: whiteUserId,
-          timeControl: { whiteTime: INITIAL_TIME_MS, blackTime: INITIAL_TIME_MS },
+          timeControl: { whiteTime: initialTimeMs, blackTime: initialTimeMs },
         })
-        .catch(console.error);
+        .catch((err) => logger.error({ err }, '[GameManager] publishToUser failed'));
     }
   }
 
@@ -420,6 +444,47 @@ export class GameManager {
         await game.respondDraw(playerSocket, false);
         break;
     }
+  }
+
+  // ── Lobby ───────────────────────────────────────────────────────────────────
+
+  private async handleCreateLobby(socket: WebSocket, userId: string): Promise<void> {
+    // Retry on the rare collision (birthday probability ~1/16M for 6-char hex)
+    let code: string;
+    let stored = false;
+    let attempts = 0;
+    do {
+      code = Buffer.from(webcrypto.getRandomValues(new Uint8Array(3))).toString('hex');
+      stored = await this.redisService.createLobby(code, userId);
+      attempts++;
+    } while (!stored && attempts < 5);
+
+    if (!stored) {
+      logger.error({ userId }, '[GameManager] failed to generate unique lobby code');
+      return;
+    }
+
+    socket.send(JSON.stringify({ type: LOBBY_CREATED, payload: { code } }));
+    logger.info({ userId, code }, '[GameManager] lobby created');
+  }
+
+  private async handleJoinLobby(socket: WebSocket, userId: string, code: string): Promise<void> {
+    const creatorId = await this.redisService.popLobby(code);
+
+    if (!creatorId) {
+      socket.send(JSON.stringify({ type: LOBBY_NOT_FOUND }));
+      return;
+    }
+
+    if (creatorId === userId) {
+      // Creator joined their own code — treat as LOBBY_NOT_FOUND to avoid self-game
+      socket.send(JSON.stringify({ type: LOBBY_NOT_FOUND }));
+      return;
+    }
+
+    logger.info({ creatorId, joinerId: userId, code }, '[GameManager] lobby joined — creating game');
+    // Creator is white, joiner is black (deterministic); lobby games default to blitz
+    await this.createGameForMatch(creatorId, userId, DEFAULT_TIME_CONTROL);
   }
 
   private cleanupGame(game: Game): void {

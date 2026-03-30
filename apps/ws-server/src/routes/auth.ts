@@ -1,7 +1,19 @@
 import type { IncomingMessage, ServerResponse } from 'http';
+import { z } from 'zod';
 import type { AuthService } from '../services/AuthService.js';
 import type { DatabaseService } from '../services/DatabaseService.js';
 import type { RedisService } from '../services/RedisService.js';
+import { logger } from '../logger.js';
+
+const SignupSchema = z.object({
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers, and underscores'),
+  password: z.string().min(8).max(100),
+});
+
+const SigninSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+});
 
 interface ApiResponse<T> {
   success: boolean;
@@ -58,7 +70,15 @@ export function createAuthHandler(
 
     // Health check (both /health and /healthz for k8s liveness probes)
     if ((url === '/health' || url === '/healthz') && method === 'GET') {
-      sendJson(res, 200, { success: true, data: { status: 'ok', ts: Date.now() } });
+      const [dbOk, redisOk] = await Promise.all([
+        dbService.ping().then(() => true).catch(() => false),
+        redisService.ping().then((r) => r === 'PONG').catch(() => false),
+      ]);
+      if (!dbOk || !redisOk) {
+        sendJson(res, 503, { success: false, data: { status: 'unhealthy', db: dbOk, redis: redisOk } });
+        return;
+      }
+      sendJson(res, 200, { success: true, data: { status: 'ok', db: true, redis: true } });
       return;
     }
 
@@ -73,8 +93,13 @@ export function createAuthHandler(
         return;
       }
 
-      const username = typeof body.username === 'string' ? body.username : '';
-      const password = typeof body.password === 'string' ? body.password : '';
+      const schema = url === '/auth/signup' ? SignupSchema : SigninSchema;
+      const parsed = schema.safeParse(body);
+      if (!parsed.success) {
+        sendJson(res, 400, { success: false, error: parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ') });
+        return;
+      }
+      const { username, password } = parsed.data;
 
       try {
         if (url === '/auth/signup') {
@@ -87,6 +112,7 @@ export function createAuthHandler(
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Internal error';
         const status = message.includes('already taken') || message.includes('Invalid') ? 400 : 500;
+        if (status === 500) logger.error({ err }, 'Auth handler error');
         sendJson(res, status, { success: false, error: message });
       }
       return;
@@ -132,23 +158,25 @@ export function createAuthHandler(
     if (method === 'GET' && url === '/games/active') {
       try {
         const gameIds = await redisService.getActiveGames();
-        const games = await Promise.all(
-          gameIds.map(async (id) => {
-            const state = await redisService.getGameState(id);
-            if (!state) return null;
-            const [white, black] = await Promise.all([
-              dbService.getProfileById(state.whitePlayerId),
-              dbService.getProfileById(state.blackPlayerId),
-            ]);
-            return {
-              id,
-              whitePlayer: { username: white?.username ?? 'Unknown', rating: white?.rating ?? 1200 },
-              blackPlayer: { username: black?.username ?? 'Unknown', rating: black?.rating ?? 1200 },
-              fen: state.fen,
-              turn: state.turn,
-            };
-          }),
-        );
+        const states = await Promise.all(gameIds.map((id) => redisService.getGameState(id)));
+
+        // Batch-load all player profiles in one query
+        const playerIds = states.flatMap((s) => s ? [s.whitePlayerId, s.blackPlayerId] : []);
+        const profiles = playerIds.length > 0 ? await dbService.getProfilesByIds(playerIds) : {};
+
+        const games = gameIds.map((id, i) => {
+          const state = states[i];
+          if (!state) return null;
+          const white = profiles[state.whitePlayerId];
+          const black = profiles[state.blackPlayerId];
+          return {
+            id,
+            whitePlayer: { username: white?.username ?? 'Unknown', rating: white?.rating ?? 1200 },
+            blackPlayer: { username: black?.username ?? 'Unknown', rating: black?.rating ?? 1200 },
+            fen: state.fen,
+            turn: state.turn,
+          };
+        });
         sendJson(res, 200, { success: true, data: games.filter(Boolean) });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Internal error';
@@ -163,7 +191,10 @@ export function createAuthHandler(
     if (method === 'GET' && gameMoveMatch) {
       const gameId = gameMoveMatch[1]!;
       try {
-        const moves = await redisService.getGameMoves(gameId);
+        let moves = await redisService.getGameMoves(gameId);
+        if (!moves || moves.length === 0) {
+          moves = await dbService.getGameMoves(gameId) as typeof moves;
+        }
         const state = await redisService.getGameState(gameId);
         sendJson(res, 200, { success: true, data: { moves, fen: state?.fen ?? null } });
       } catch (err) {

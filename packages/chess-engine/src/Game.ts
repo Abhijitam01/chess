@@ -47,6 +47,10 @@ export class Game {
     return this.board.isCheckmate();
   }
 
+  isStalemate(): boolean {
+    return this.board.isStalemate();
+  }
+
   pgn(): string {
     return this.board.pgn();
   }
