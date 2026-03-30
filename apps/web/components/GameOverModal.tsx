@@ -5,15 +5,19 @@ interface GameOverModalProps {
   winner: string | null;
   playerColor: 'white' | 'black' | null;
   reason: string;
+  whiteRatingChange?: number | null;
+  blackRatingChange?: number | null;
   onPlayAgain: () => void;
 }
 
-export function GameOverModal({ 
-  show, 
-  winner, 
+export function GameOverModal({
+  show,
+  winner,
   playerColor,
   reason,
-  onPlayAgain 
+  whiteRatingChange,
+  blackRatingChange,
+  onPlayAgain
 }: GameOverModalProps) {
   if (!show) return null;
 
@@ -39,6 +43,8 @@ export function GameOverModal({
 
   const { title, subtitle, color, emoji } = getResultText();
 
+  const myRatingChange = playerColor === 'white' ? whiteRatingChange : blackRatingChange;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fadeIn">
       <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-700 animate-scaleIn">
@@ -59,12 +65,20 @@ export function GameOverModal({
           </p>
         </div>
 
-        {/* Stats (placeholder for future rating changes) */}
-        <div className="bg-gray-900 rounded-lg p-4 mb-6">
+        {/* Stats */}
+        <div className="bg-gray-900 rounded-lg p-4 mb-6 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Result:</span>
-            <span className="text-white font-semibold">{winner || 'Draw'}</span>
+            <span className="text-white font-semibold">{winner ? `${winner} wins` : 'Draw'}</span>
           </div>
+          {myRatingChange != null && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Rating change:</span>
+              <span className={`font-bold ${myRatingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {myRatingChange >= 0 ? '+' : ''}{myRatingChange}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Buttons */}

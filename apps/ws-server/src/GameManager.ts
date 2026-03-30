@@ -21,8 +21,10 @@ const MovePayloadSchema = z.object({
   promotion: z.string().optional(),
 });
 
+const TimeControlKeySchema = z.enum(['bullet', 'blitz', 'rapid', 'classical']);
+
 const ClientMessageSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal(INIT_GAME) }),
+  z.object({ type: z.literal(INIT_GAME), timeControl: TimeControlKeySchema.optional() }),
   z.object({ type: z.literal(MOVE), move: MovePayloadSchema }),
   z.object({ type: z.literal(RESIGN) }),
   z.object({ type: z.literal(DRAW_OFFER) }),
@@ -177,7 +179,7 @@ export class GameManager {
 
       switch (message.type) {
         case INIT_GAME:
-          await this.handleInitGame(socket, userId);
+          await this.handleInitGame(socket, userId, message.timeControl ?? DEFAULT_TIME_CONTROL);
           break;
 
         case MOVE: {
@@ -268,7 +270,7 @@ export class GameManager {
 
   // ── Matchmaking ────────────────────────────────────────────────────────────
 
-  private async handleInitGame(socket: WebSocket, userId: string): Promise<void> {
+  private async handleInitGame(socket: WebSocket, userId: string, timeControl: TimeControlKey = DEFAULT_TIME_CONTROL): Promise<void> {
     // 1. Reconnect to a game this node owns
     const existingGame = this.userIdToGame.get(userId);
     if (existingGame && !existingGame.isFinished()) {
@@ -290,14 +292,14 @@ export class GameManager {
       await this.redisService.finishGame(activeGameId, userId, userId);
     }
 
-    // 4. Enqueue in the shared matchmaking queue (idempotent — removes stale entry first)
-    await this.redisService.enqueueForMatchmaking(userId);
+    // 4. Enqueue in the time-control-specific matchmaking queue (idempotent)
+    await this.redisService.enqueueForMatchmaking(userId, timeControl);
 
-    // 5. Atomically try to dequeue a matched pair
-    const pair = await this.redisService.tryDequeueMatchedPair();
+    // 5. Atomically try to dequeue a matched pair from the same time-control queue
+    const pair = await this.redisService.tryDequeueMatchedPair(timeControl);
     if (pair) {
       const [userA, userB] = pair;
-      await this.createGameForMatch(userA, userB, DEFAULT_TIME_CONTROL);
+      await this.createGameForMatch(userA, userB, timeControl);
     } else {
       // Wait for a cross-node match_found notification
       this.redisService.subscribeToUserNotify(userId, (notification) => {

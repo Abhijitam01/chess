@@ -77,8 +77,10 @@ export interface MovePayload {
 }
 
 export interface GameOverPayload {
-  winner: Color;
+  winner: Color | null;
   reason?: string;
+  whiteRatingChange?: number;
+  blackRatingChange?: number;
 }
 
 export interface ServerInitGameMessage {
@@ -132,6 +134,7 @@ export type ServerMessage =
 
 export interface ClientInitGameMessage {
   type: typeof INIT_GAME;
+  timeControl?: TimeControlKey;
 }
 
 export interface ClientMoveMessage {

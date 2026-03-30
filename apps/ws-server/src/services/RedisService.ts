@@ -1,10 +1,14 @@
 import Redis from 'ioredis';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
+import { DEFAULT_TIME_CONTROL, type TimeControlKey } from '@repo/types';
 
 const GAME_TTL = 86400; // 24 hours
 const ACTIVE_GAMES_KEY = 'active_games';
-const MATCHMAKING_QUEUE_KEY = 'matchmaking:queue';
+
+function matchmakingQueueKey(timeControl: string): string {
+  return `matchmaking:${timeControl}`;
+}
 
 export interface GameState {
   fen: string;
@@ -205,21 +209,23 @@ export class RedisService {
 
   // ── Matchmaking queue ─────────────────────────────────────────────────────
 
-  async enqueueForMatchmaking(userId: string): Promise<void> {
+  async enqueueForMatchmaking(userId: string, timeControl: TimeControlKey = DEFAULT_TIME_CONTROL): Promise<void> {
+    const key = matchmakingQueueKey(timeControl);
     // Remove any stale entry first to avoid duplicates
-    await this.client.lrem(MATCHMAKING_QUEUE_KEY, 0, userId);
-    await this.client.lpush(MATCHMAKING_QUEUE_KEY, userId);
+    await this.client.lrem(key, 0, userId);
+    await this.client.lpush(key, userId);
   }
 
-  async removeFromMatchmaking(userId: string): Promise<void> {
-    await this.client.lrem(MATCHMAKING_QUEUE_KEY, 0, userId);
+  async removeFromMatchmaking(userId: string, timeControl: TimeControlKey = DEFAULT_TIME_CONTROL): Promise<void> {
+    await this.client.lrem(matchmakingQueueKey(timeControl), 0, userId);
   }
 
   /**
-   * Atomically pop a pair of users from the queue.
+   * Atomically pop a pair of users from the given time-control queue.
    * Returns [user1, user2] if two are available, null otherwise.
    */
-  async tryDequeueMatchedPair(): Promise<[string, string] | null> {
+  async tryDequeueMatchedPair(timeControl: TimeControlKey = DEFAULT_TIME_CONTROL): Promise<[string, string] | null> {
+    const key = matchmakingQueueKey(timeControl);
     const script = `
       local count = redis.call('LLEN', KEYS[1])
       if count >= 2 then
@@ -229,7 +235,7 @@ export class RedisService {
       end
       return nil
     `;
-    const result = await this.client.eval(script, 1, MATCHMAKING_QUEUE_KEY) as string[] | null;
+    const result = await this.client.eval(script, 1, key) as string[] | null;
     if (!result || result.length < 2 || !result[0] || !result[1]) return null;
     return [result[0], result[1]];
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createChess } from "@chess/chess-engine";
-import { ServerMessage, ClientMessage, DRAW_OFFER, DRAW_ACCEPT, DRAW_DECLINE, CREATE_LOBBY, JOIN_LOBBY, CLOCK_SYNC } from "@repo/types";
+import { ServerMessage, ClientMessage, DRAW_OFFER, DRAW_ACCEPT, DRAW_DECLINE, CREATE_LOBBY, JOIN_LOBBY, CLOCK_SYNC, TimeControlKey, DEFAULT_TIME_CONTROL } from "@repo/types";
 
 type GameStatus = "waiting" | "playing" | "finished";
 type PlayerColor = "white" | "black" | null;
@@ -45,6 +45,11 @@ export function useChessGame(
   const [drawOfferFromOpponent, setDrawOfferFromOpponent] = useState(false);
   const [drawOfferPending, setDrawOfferPending] = useState(false);
 
+  const [ratingChanges, setRatingChanges] = useState<{ white: number | null; black: number | null }>({
+    white: null,
+    black: null,
+  });
+
   // Lobby state
   type LobbyMode = 'menu' | 'creating' | 'waiting' | 'joining' | 'error';
   const [showLobbyModal, setShowLobbyModal] = useState(false);
@@ -72,9 +77,9 @@ export function useChessGame(
 
   /* -------------------------------- actions -------------------------------- */
 
-  const startMatchMaking = () => {
+  const startMatchMaking = (timeControl: TimeControlKey = DEFAULT_TIME_CONTROL) => {
     setGameState((p) => ({ ...p, matchMakingStatus: "finding" }));
-    socket?.send(JSON.stringify({ type: "init_game" }));
+    socket?.send(JSON.stringify({ type: "init_game", timeControl }));
   };
 
   const openLobbyModal = useCallback(() => {
@@ -175,6 +180,7 @@ export function useChessGame(
     setMoveHistory([]);
     setTimeState({ whiteTime: 300000, blackTime: 300000 });
     setGameOverReason(null);
+    setRatingChanges({ white: null, black: null });
   };
 
   /* -------------------------------- timer -------------------------------- */
@@ -306,6 +312,10 @@ export function useChessGame(
           setDrawOfferFromOpponent(false);
           onSoundEvent?.("gameOver");
           setGameOverReason(message.payload.reason || "game_over");
+          setRatingChanges({
+            white: message.payload.whiteRatingChange ?? null,
+            black: message.payload.blackRatingChange ?? null,
+          });
           setGameState((p) => ({
             ...p,
             status: "finished",
@@ -391,6 +401,7 @@ export function useChessGame(
     gameOverReason,
     isMyTurn,
     onMatchAnimationComplete: () => setShowMatchStartAnimation(false),
+    ratingChanges,
     // Lobby
     showLobbyModal,
     lobbyMode,

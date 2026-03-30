@@ -11,9 +11,11 @@ import { useRouter } from "next/navigation";
 import { ChessClock } from "../../components/ChessClock";
 import { MatchmakingButton } from "../../components/MatchMakingButton";
 import { LobbyModal } from "../../components/LobbyModal";
+import { GameOverModal } from "../../components/GameOverModal";
 import { useAuth } from "../../hooks/useAuth";
 import { useThemeContext } from "../../context/ThemeContext";
 import { useSound } from "../../hooks/useSound";
+import { TIME_CONTROLS, TimeControlKey, DEFAULT_TIME_CONTROL } from "@repo/types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
 
@@ -22,6 +24,7 @@ export default function Game() {
   const { boardTheme, showCoordinates, soundEnabled } = useThemeContext();
   const { play: playSound } = useSound(soundEnabled);
   const router = useRouter();
+  const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlKey>(DEFAULT_TIME_CONTROL);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -56,6 +59,7 @@ export default function Game() {
     declineDraw,
     drawOfferPending,
     drawOfferFromOpponent,
+    ratingChanges,
     showLobbyModal,
     lobbyMode,
     lobbyCode,
@@ -204,7 +208,7 @@ export default function Game() {
             showMatchStartAnimation={showMatchStartAnimation}
             onPlayAgain={() => {
               resetGame();
-              startMatchMaking();
+              startMatchMaking(selectedTimeControl);
             }}
             onOfferDraw={offerDraw}
             onAcceptDraw={acceptDraw}
@@ -213,9 +217,27 @@ export default function Game() {
             drawOfferFromOpponent={drawOfferFromOpponent}
           />
 
+          {matchMakingStatus === 'idle' && (
+            <div className="grid grid-cols-4 gap-1 rounded-lg overflow-hidden border border-white/10">
+              {(Object.keys(TIME_CONTROLS) as TimeControlKey[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedTimeControl(key)}
+                  className={`py-2 text-xs font-semibold capitalize transition-colors ${
+                    selectedTimeControl === key
+                      ? 'bg-accent-emerald text-white'
+                      : 'bg-white/[0.03] text-zinc-400 hover:bg-white/10 hover:text-zinc-200'
+                  }`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          )}
+
           <MatchmakingButton
             status={matchMakingStatus}
-            onFindOpponent={startMatchMaking}
+            onFindOpponent={() => startMatchMaking(selectedTimeControl)}
             isConnected={isConnected}
           />
 
@@ -245,6 +267,19 @@ export default function Game() {
         </div>
       </main>
 
+
+      <GameOverModal
+        show={status === 'finished' && !!gameOverReason}
+        winner={winner}
+        playerColor={playerColor}
+        reason={gameOverReason ?? ''}
+        whiteRatingChange={ratingChanges.white}
+        blackRatingChange={ratingChanges.black}
+        onPlayAgain={() => {
+          resetGame();
+          startMatchMaking(selectedTimeControl);
+        }}
+      />
 
       <LobbyModal
         show={showLobbyModal}
