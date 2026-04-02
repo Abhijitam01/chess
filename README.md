@@ -330,16 +330,3 @@ game.test.ts          13   moves, resign, draw offer/accept/decline, reconnect
 
 ---
 
-## Roadmap
-
-- [ ] CI/CD — GitHub Actions: lint → build → test on every PR
-- [ ] Structured logging — replace `console.*` with Pino (JSON output, log levels)
-- [ ] Deep health check — `/healthz` pings Redis + DB; returns 503 on failure
-- [ ] Zod validation on HTTP routes — consistent with the WS validation layer
-- [ ] Game replay — `/game/:id` page with forward / back controls
-- [ ] Time control selection — bullet / blitz / rapid / classical; separate queues per format
-- [ ] Stockfish analysis — WASM Web Worker + evaluation bar on the replay page
-- [ ] Private lobby — challenge a friend via a 6-character code (10-minute Redis TTL)
-- [ ] Prometheus metrics — `/metrics` with `prom-client` (active games, moves/s, queue depth)
-- [ ] Stalemate UI feedback
-- [ ] Sound toggle in UI
