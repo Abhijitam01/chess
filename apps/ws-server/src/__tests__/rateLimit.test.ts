@@ -167,7 +167,7 @@ describe("GameManager message routing", () => {
     socket.emit("message", Buffer.from(JSON.stringify({ type: "init_game" })));
 
     // Give the async handler a tick to run
-    await vi.waitFor(() => expect(redis.enqueueForMatchmaking).toHaveBeenCalledWith("user1"));
+    await vi.waitFor(() => expect(redis.enqueueForMatchmaking).toHaveBeenCalledWith("user1", "blitz"));
   });
 
   it("cleans up socket maps on disconnect", () => {

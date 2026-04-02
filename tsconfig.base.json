@@ -22,7 +22,7 @@
       "@repo/types": ["packages/types/src/index.ts"],
       "@repo/ui": ["packages/ui/src/index.tsx"],
       "@repo/utils": ["packages/utils/src/index.ts"],
-      "@repo/db": ["packages/db/src/index.ts"]
+      "@repo/db": ["packages/db/src/index.mts"]
     }
   },
   "exclude": ["node_modules"]

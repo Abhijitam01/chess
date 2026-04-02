@@ -28,7 +28,7 @@ function sendJson<T>(res: ServerResponse, status: number, body: ApiResponse<T>):
     'Content-Length': Buffer.byteLength(payload),
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   });
   res.end(payload);
 }
@@ -62,7 +62,7 @@ export function createAuthHandler(
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       });
       res.end();
       return;
@@ -193,7 +193,15 @@ export function createAuthHandler(
       try {
         let moves = await redisService.getGameMoves(gameId);
         if (!moves || moves.length === 0) {
-          moves = await dbService.getGameMoves(gameId) as typeof moves;
+          const dbMoves = await dbService.getGameMoves(gameId);
+          moves = dbMoves.map((m) => ({
+            san: m.moveSan,
+            uci: m.moveUci,
+            fen: m.fen,
+            whiteTime: m.timeLeftWhite ?? 0,
+            blackTime: m.timeLeftBlack ?? 0,
+            moveNumber: m.moveNumber,
+          }));
         }
         const state = await redisService.getGameState(gameId);
         sendJson(res, 200, { success: true, data: { moves, fen: state?.fen ?? null } });

@@ -68,7 +68,7 @@ import { RedisService } from "../services/RedisService.js";
 // ── Helper: capture the 'message' dispatcher registered on the sub-client ────
 
 function captureMessageDispatcher(): (channel: string, raw: string) => void {
-  const call = mocks.mockOn.mock.calls.find(([event]) => event === "message");
+  const call = mocks.mockOn.mock.calls.find(([event]: [string, ...unknown[]]) => event === "message");
   if (!call) throw new Error("No 'message' listener registered on sub-client");
   return call[1] as (channel: string, raw: string) => void;
 }
@@ -152,8 +152,8 @@ describe("RedisService.enqueueForMatchmaking", () => {
 
   it("removes stale entry then pushes to front of queue", async () => {
     await svc.enqueueForMatchmaking("alice");
-    expect(mocks.mockLrem).toHaveBeenCalledWith("matchmaking:queue", 0, "alice");
-    expect(mocks.mockLpush).toHaveBeenCalledWith("matchmaking:queue", "alice");
+    expect(mocks.mockLrem).toHaveBeenCalledWith("matchmaking:blitz", 0, "alice");
+    expect(mocks.mockLpush).toHaveBeenCalledWith("matchmaking:blitz", "alice");
   });
 });
 

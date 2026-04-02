@@ -7,7 +7,8 @@
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
-      "default": "./src/index.js"
+      "import": "./src/index.mjs",
+      "require": "./src/index.js"
     }
   },
   "scripts": {
