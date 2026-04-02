@@ -1,19 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { useChessGame } from "../../hooks/useChessGame";
 import { ChessBoard } from "../../components/ChessBoard";
 import { MoveHistory } from "../../components/MoveHistory";
 import { useRouter } from "next/navigation";
 import { LobbyModal } from "../../components/LobbyModal";
-import { GameOverModal } from "../../components/GameOverModal";
+import { GameResultPanel } from "../../components/GameResultPanel";
 import { useAuth } from "../../hooks/useAuth";
 import { useThemeContext, BOARD_THEMES, type BoardTheme } from "../../context/ThemeContext";
 import { useSound } from "../../hooks/useSound";
-import { TIME_CONTROLS, TimeControlKey, DEFAULT_TIME_CONTROL } from "@repo/types";
+import { TIME_CONTROLS, TimeControlKey, TimeControlCategory, DEFAULT_TIME_CONTROL } from "@repo/types";
+import { Chess } from "@chess/chess-engine";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
+
+// ── Bot logic ──────────────────────────────────────────────────────────────
+type BotDifficulty = 'easy' | 'medium' | 'hard';
+
+const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+function evalPosition(chess: Chess, forColor: 'w' | 'b'): number {
+  if (chess.isCheckmate()) return chess.turn() !== forColor ? 1000 : -1000;
+  if (chess.isDraw()) return 0;
+  let score = 0;
+  for (const row of chess.board()) {
+    for (const sq of row) {
+      if (!sq) continue;
+      const val = PIECE_VALUES[sq.type] ?? 0;
+      score += sq.color === forColor ? val : -val;
+    }
+  }
+  return score;
+}
+
+function getBotMove(chess: Chess, difficulty: BotDifficulty): { from: string; to: string; san: string } | null {
+  const moves = chess.moves({ verbose: true }) as Array<{ from: string; to: string; san: string; captured?: string }>;
+  if (moves.length === 0) return null;
+
+  if (difficulty === 'easy') {
+    return moves[Math.floor(Math.random() * moves.length)]!;
+  }
+
+  if (difficulty === 'medium') {
+    const captures = moves.filter(m => m.captured);
+    if (captures.length > 0) {
+      captures.sort((a, b) => (PIECE_VALUES[b.captured!] ?? 0) - (PIECE_VALUES[a.captured!] ?? 0));
+      return captures[0]!;
+    }
+    return moves[Math.floor(Math.random() * moves.length)]!;
+  }
+
+  // Hard: 1-ply lookahead with material evaluation
+  const color = chess.turn();
+  let bestScore = -Infinity;
+  let bestMove = moves[0]!;
+  for (const move of moves) {
+    const temp = new Chess(chess.fen());
+    temp.move(move);
+    const score = evalPosition(temp, color);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = move;
+    }
+  }
+  return bestMove;
+}
 
 function formatTime(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -40,6 +93,64 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
         className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : "translate-x-0.5"}`}
       />
     </button>
+  );
+}
+
+const CATEGORIES: TimeControlCategory[] = ['bullet', 'blitz', 'rapid', 'classical'];
+
+function TimeControlPicker({
+  value,
+  onChange,
+  compact = false,
+}: {
+  value: TimeControlKey;
+  onChange: (k: TimeControlKey) => void;
+  compact?: boolean;
+}) {
+  const currentCategory = TIME_CONTROLS[value].category;
+
+  const optionsForCategory = (cat: TimeControlCategory) =>
+    Object.entries(TIME_CONTROLS).filter(([, v]) => v.category === cat) as [TimeControlKey, typeof TIME_CONTROLS[TimeControlKey]][];
+
+  const selectCategory = (cat: TimeControlCategory) => {
+    const opts = optionsForCategory(cat);
+    if (opts.length > 0) onChange(opts[0]![0]);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-4 rounded-lg bg-[#0d1117] border border-[#1a2235] overflow-hidden">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => selectCategory(cat)}
+            className={`py-2 text-[11px] font-semibold capitalize transition-all ${
+              currentCategory === cat
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {optionsForCategory(currentCategory).map(([key, tc]) => (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              value === key
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/50'
+                : 'bg-[#1c2333] text-slate-400 border border-[#2a3547] hover:border-indigo-500/30 hover:text-slate-200'
+            }`}
+          >
+            {tc.minutes} min
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -107,6 +218,90 @@ export default function Game() {
   } = useChessGame(socket, isConnected, playSound);
 
   const [viewingMoveIndex, setViewingMoveIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'moves' | 'chat' | 'info'>('moves');
+
+  // Bot play state
+  const [botMode, setBotMode] = useState(false);
+  const [selectedBotDifficulty, setSelectedBotDifficulty] = useState<BotDifficulty>('medium');
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('medium');
+  const [localMoves, setLocalMoves] = useState<string[]>([]);
+  const [localStatus, setLocalStatus] = useState<'playing' | 'finished'>('playing');
+  const [localWinner, setLocalWinner] = useState<'white' | 'black' | null>(null);
+  const [localGameOverReason, setLocalGameOverReason] = useState<string | null>(null);
+  const [botThinking, setBotThinking] = useState(false);
+
+  const localChess = useMemo(() => {
+    const c = new Chess();
+    for (const san of localMoves) c.move(san);
+    return c;
+  }, [localMoves]);
+
+  const startBotGame = (difficulty: BotDifficulty) => {
+    setBotMode(true);
+    setBotDifficulty(difficulty);
+    setLocalMoves([]);
+    setLocalStatus('playing');
+    setLocalWinner(null);
+    setLocalGameOverReason(null);
+    setBotThinking(false);
+    setViewingMoveIndex(null);
+  };
+
+  const makeBotGameMove = (from: string, to: string): boolean => {
+    if (botThinking || localStatus !== 'playing') return false;
+    const temp = new Chess(localChess.fen());
+    let result;
+    try {
+      result = temp.move({ from, to, promotion: 'q' });
+    } catch {
+      return false;
+    }
+    if (!result) return false;
+    const newMoves = [...localMoves, result.san];
+    setLocalMoves(newMoves);
+    setViewingMoveIndex(null);
+    if (temp.isGameOver()) {
+      const winner = temp.isCheckmate() ? (temp.turn() === 'w' ? 'black' : 'white') : null;
+      setLocalWinner(winner);
+      setLocalGameOverReason(temp.isCheckmate() ? 'checkmate' : temp.isStalemate() ? 'stalemate' : 'draw');
+      setLocalStatus('finished');
+    } else {
+      setBotThinking(true);
+    }
+    return true;
+  };
+
+  const resetBotGame = () => {
+    setBotMode(false);
+    setLocalMoves([]);
+    setLocalStatus('playing');
+    setLocalWinner(null);
+    setLocalGameOverReason(null);
+    setBotThinking(false);
+    setViewingMoveIndex(null);
+  };
+
+  // Bot auto-move effect
+  useEffect(() => {
+    if (!botMode || !botThinking || localStatus !== 'playing') return;
+    const delay = botDifficulty === 'easy' ? 300 : botDifficulty === 'medium' ? 500 : 900;
+    const timer = setTimeout(() => {
+      const move = getBotMove(localChess, botDifficulty);
+      if (!move) { setBotThinking(false); return; }
+      const newMoves = [...localMoves, move.san];
+      setLocalMoves(newMoves);
+      setBotThinking(false);
+      const temp = new Chess();
+      for (const san of newMoves) temp.move(san);
+      if (temp.isGameOver()) {
+        const winner = temp.isCheckmate() ? (temp.turn() === 'w' ? 'black' : 'white') : null;
+        setLocalWinner(winner);
+        setLocalGameOverReason(temp.isCheckmate() ? 'checkmate' : temp.isStalemate() ? 'stalemate' : 'draw');
+        setLocalStatus('finished');
+      }
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [botMode, botThinking, localChess, localMoves, botDifficulty, localStatus]);
 
   useEffect(() => {
     if (status === "playing") setViewingMoveIndex(null);
@@ -120,15 +315,25 @@ export default function Game() {
     );
   }
 
-  const isPlaying = status === "playing";
-  const isIdle = matchMakingStatus === "idle" && status !== "playing";
-  const isFinding = matchMakingStatus === "finding";
+  const isFinished = (status === "finished" && !!gameOverReason) || (botMode && localStatus === 'finished');
+  const isPlaying = status === "playing" || (botMode && localStatus === 'playing');
+  const showBoard = isPlaying || isFinished;
+  const isIdle = !botMode && matchMakingStatus === "idle" && status !== "playing" && !isFinished;
+  const isFinding = !botMode && matchMakingStatus === "finding";
+
+  // Display variables — bot mode overrides multiplayer
+  const displayChess = botMode ? localChess : chess;
+  const displayPlayerColor = botMode ? 'white' : playerColor;
+  const displayMoveHistory = botMode ? localMoves : moveHistory;
+  const displayIsMyTurn = botMode
+    ? localChess.turn() === 'w' && !botThinking && localStatus === 'playing'
+    : isMyTurn;
 
   const myTime = playerColor === "white" ? whiteTime : blackTime;
   const opponentTime = playerColor === "white" ? blackTime : whiteTime;
-  const myClockActive = isMyTurn && isPlaying;
-  const opponentClockActive = !isMyTurn && isPlaying;
-  const opponentColorLabel = playerColor === "white" ? "black" : "white";
+  const myClockActive = isMyTurn && status === "playing";
+  const opponentClockActive = !isMyTurn && status === "playing";
+  const opponentColorLabel = displayPlayerColor === "white" ? "black" : "white";
 
   return (
     <div className="h-screen flex flex-col bg-[#0d1117] text-slate-100 overflow-hidden">
@@ -137,7 +342,7 @@ export default function Game() {
         {/* Left */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/game")}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <span className="text-xl text-indigo-400">♔</span>
@@ -150,7 +355,7 @@ export default function Game() {
               <div className="hidden sm:block">
                 <div className="text-sm font-bold text-slate-100">Live Game</div>
                 <div className="text-[10px] text-slate-500 uppercase tracking-wide leading-none">
-                  {selectedTimeControl} · {playerColor ?? ""}
+                  {TIME_CONTROLS[selectedTimeControl].minutes} min · {playerColor ?? ""}
                 </div>
               </div>
             </>
@@ -218,7 +423,7 @@ export default function Game() {
         {/* Icon Sidebar */}
         <aside className="hidden lg:flex w-14 flex-shrink-0 bg-[#111827] border-r border-[#1a2235] flex-col items-center py-3 gap-1">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/game")}
             title="Home"
             className="p-3 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-[#1c2333] transition-colors"
           >
@@ -252,87 +457,15 @@ export default function Game() {
           </div>
         </aside>
 
-        {/* ── Left Panel ── */}
+        {/* ── Left Panel (idle only) ── */}
+        {!isPlaying && (
         <div className="hidden lg:flex flex-col w-[240px] flex-shrink-0 bg-[#111827] border-r border-[#1a2235] overflow-y-auto">
-          {isPlaying ? (
-            <>
-              {/* Opponent card */}
-              <div className="p-4 border-b border-[#1a2235] space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-violet-700 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
-                    ?
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold text-slate-100 truncate">Opponent</div>
-                    <div className="text-xs text-slate-500">
-                      {opponentColorLabel === "white" ? "♔" : "♚"} {opponentColorLabel}
-                    </div>
-                  </div>
-                </div>
-                {/* Opponent clock */}
-                <div
-                  className={`rounded-xl px-4 py-3 text-center transition-all ${
-                    opponentClockActive
-                      ? "bg-indigo-600/20 border border-indigo-500/40"
-                      : "bg-[#1c2333] border border-[#2a3547]"
-                  }`}
-                >
-                  <span
-                    className={`font-mono text-3xl font-black tabular-nums tracking-wide ${
-                      opponentClockActive ? "text-indigo-300" : "text-slate-500"
-                    }`}
-                  >
-                    {formatTime(opponentTime)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Move History */}
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div className="px-4 py-2.5 border-b border-[#1a2235] flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    Move History
-                  </span>
-                  {moveHistory.length > 0 && (
-                    <span className="text-[10px] text-slate-600 bg-[#1c2333] px-1.5 py-0.5 rounded font-mono">
-                      {Math.ceil(moveHistory.length / 2)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 overflow-hidden p-2">
-                  <MoveHistory
-                    moves={moveHistory}
-                    selectedMoveIndex={viewingMoveIndex}
-                    onMoveSelect={(idx) => setViewingMoveIndex(idx)}
-                  />
-                </div>
-              </div>
-            </>
-          ) : (
-            /* Idle: time controls + matchmaking */
             <div className="p-4 space-y-4">
               <div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                   Time Control
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(TIME_CONTROLS) as TimeControlKey[]).map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedTimeControl(key)}
-                      className={`py-3 px-2 rounded-xl text-xs font-bold capitalize text-center transition-all ${
-                        selectedTimeControl === key
-                          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                          : "bg-[#1c2333] border border-[#2a3547] text-slate-400 hover:border-indigo-500/30 hover:text-slate-200"
-                      }`}
-                    >
-                      <div className="text-base mb-1">
-                        {key === "bullet" ? "⚡" : key === "blitz" ? "🔥" : key === "rapid" ? "⏱" : "♟"}
-                      </div>
-                      {key}
-                    </button>
-                  ))}
-                </div>
+                <TimeControlPicker value={selectedTimeControl} onChange={setSelectedTimeControl} />
               </div>
 
               <button
@@ -375,105 +508,152 @@ export default function Game() {
                 Challenge a Friend
               </button>
 
+              <div className="relative flex items-center">
+                <div className="flex-1 border-t border-[#1a2235]" />
+                <span className="px-2 text-[10px] text-slate-600 bg-[#111827]">OR</span>
+                <div className="flex-1 border-t border-[#1a2235]" />
+              </div>
+
+              <div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                  Play vs Bot
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 mb-2">
+                  {(['easy', 'medium', 'hard'] as const).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setSelectedBotDifficulty(d)}
+                      className={`py-2 rounded-xl text-xs font-bold capitalize transition-all ${
+                        selectedBotDifficulty === d
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                          : 'bg-[#1c2333] border border-[#2a3547] text-slate-400 hover:border-indigo-500/30 hover:text-slate-200'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => startBotGame(selectedBotDifficulty)}
+                  className="w-full py-2.5 rounded-xl bg-violet-700 hover:bg-violet-600 text-white text-sm font-bold transition-colors"
+                >
+                  Play vs Bot
+                </button>
+              </div>
+
               {!isConnected && (
                 <div className="rounded-xl bg-red-950/50 border border-red-800/40 px-3 py-2.5 text-xs text-red-400 font-medium text-center">
                   Not connected to server
                 </div>
               )}
             </div>
-          )}
         </div>
+        )}
 
         {/* ── Center: Board ── */}
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#0d1117] overflow-hidden p-3 lg:p-4">
-          {/* Board */}
-          <div className="flex-1 w-full flex items-center justify-center min-h-0">
-            <div className="relative h-full aspect-square max-h-[85vh] w-auto">
-              <ChessBoard
-                chess={chess}
-                playerColor={playerColor}
-                isMyTurn={isMyTurn && viewingMoveIndex === null}
-                onMove={(from, to) => {
-                  const ok = makeMove(from, to);
-                  if (ok) setViewingMoveIndex(null);
-                  return ok;
-                }}
-                boardTheme={boardTheme}
-                showCoordinates={showCoordinates}
-                viewingMoveIndex={viewingMoveIndex}
-              />
-            </div>
-          </div>
+        <div className="flex-1 flex flex-col bg-[#0d1117] overflow-hidden">
+          {showBoard ? (
+            /* Playing / Finished: opponent strip + board + player strip */
+            <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden p-2 lg:p-3">
+              <div className="flex flex-col" style={{
+                height: 'min(calc(100vh - 56px - 32px), 90vh)',
+                width: 'min(min(calc(100vh - 56px - 32px), 90vh), 100%)'
+              }}>
+                {/* Opponent strip */}
+                <div className="h-[52px] flex-shrink-0 flex items-center justify-between px-1 gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${botMode ? 'bg-violet-700' : 'bg-violet-700'}`}>
+                      {botMode ? '🤖' : '?'}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-100">{botMode ? `Bot (${botDifficulty})` : 'Opponent'}</div>
+                      <div className="text-[10px] text-slate-500 capitalize">{opponentColorLabel}</div>
+                    </div>
+                  </div>
+                  {!botMode && (
+                    <div className={`px-3 py-1.5 rounded-lg font-mono text-xl font-black tabular-nums transition-all ${
+                      opponentClockActive
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-[#1c2333] text-slate-500 border border-[#2a3547]'
+                    }`}>
+                      {formatTime(opponentTime)}
+                    </div>
+                  )}
+                  {botMode && botThinking && (
+                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-900/40 border border-violet-700/40">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce [animation-delay:0ms]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce [animation-delay:300ms]" />
+                    </div>
+                  )}
+                </div>
 
-          {/* Turn indicator */}
-          {isPlaying && viewingMoveIndex === null && (
-            <div className="mt-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#111827] border border-[#1a2235] shrink-0">
-              <span className="text-lg">{turn === "w" ? "♔" : "♚"}</span>
-              <span
-                className={`text-sm font-semibold ${isMyTurn ? "text-indigo-400" : "text-slate-500"}`}
-              >
-                {isMyTurn ? "Your turn" : "Opponent's turn"}
-              </span>
+                {/* Board — square, fills remaining height */}
+                <div className="flex-1 min-h-0 min-w-0">
+                  <ChessBoard
+                    chess={displayChess}
+                    playerColor={displayPlayerColor}
+                    isMyTurn={displayIsMyTurn && viewingMoveIndex === null}
+                    onMove={(from, to) => {
+                      if (botMode) return makeBotGameMove(from, to);
+                      const ok = makeMove(from, to);
+                      if (ok) setViewingMoveIndex(null);
+                      return ok;
+                    }}
+                    boardTheme={boardTheme}
+                    showCoordinates={showCoordinates}
+                    viewingMoveIndex={viewingMoveIndex}
+                  />
+                </div>
+
+                {/* Player strip */}
+                <div className="h-[52px] flex-shrink-0 flex items-center justify-between px-1 gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-xs flex-shrink-0">
+                      {user.username[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-100">{user.username}</div>
+                      <div className="text-[10px] text-slate-500 capitalize">{displayPlayerColor ?? 'white'}</div>
+                    </div>
+                    <span className="text-xs font-bold text-indigo-400">{user.rating}</span>
+                  </div>
+                  {!botMode && (
+                    <div className={`px-3 py-1.5 rounded-lg font-mono text-xl font-black tabular-nums transition-all ${
+                      myClockActive
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                        : 'bg-[#1c2333] text-slate-500 border border-[#2a3547]'
+                    }`}>
+                      {formatTime(myTime)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Idle/finding: simple centered board */
+            <div className="flex-1 flex items-center justify-center min-h-0 p-3 lg:p-4">
+              <div className="relative h-full aspect-square max-h-[85vh] w-auto">
+                <ChessBoard
+                  chess={chess}
+                  playerColor={null}
+                  isMyTurn={false}
+                  onMove={() => false}
+                  boardTheme={boardTheme}
+                  showCoordinates={showCoordinates}
+                  viewingMoveIndex={null}
+                  readOnly
+                />
+              </div>
             </div>
           )}
 
           {/* Match starting banner */}
           {showMatchStartAnimation && (
-            <div className="mt-2 px-5 py-2 rounded-xl bg-emerald-950/60 border border-emerald-700/30 shrink-0">
+            <div className="px-5 py-2 rounded-xl bg-emerald-950/60 border border-emerald-700/30 shrink-0 mx-auto mb-2">
               <span className="text-emerald-400 font-bold text-sm animate-pulse">
                 Match Starting — you play as {playerColor}
               </span>
-            </div>
-          )}
-
-          {/* Move navigation */}
-          {moveHistory.length > 0 && (
-            <div className="mt-2 flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => setViewingMoveIndex(0)}
-                disabled={(viewingMoveIndex ?? moveHistory.length - 1) <= 0}
-                title="First move"
-                className="p-1.5 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-xs font-bold"
-              >
-                ⏮
-              </button>
-              <button
-                onClick={() =>
-                  setViewingMoveIndex(
-                    Math.max(0, (viewingMoveIndex ?? moveHistory.length - 1) - 1)
-                  )
-                }
-                disabled={(viewingMoveIndex ?? moveHistory.length - 1) <= 0}
-                title="Previous"
-                className="p-1.5 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-lg"
-              >
-                ‹
-              </button>
-              <span className="px-3 py-1 rounded bg-[#1c2333] text-xs font-mono text-slate-400 min-w-[60px] text-center">
-                {viewingMoveIndex === null
-                  ? `${Math.ceil(moveHistory.length / 2)} / ${Math.ceil(moveHistory.length / 2)}`
-                  : `${Math.ceil((viewingMoveIndex + 1) / 2)} / ${Math.ceil(moveHistory.length / 2)}`}
-              </span>
-              <button
-                onClick={() => {
-                  const next = (viewingMoveIndex ?? moveHistory.length - 1) + 1;
-                  if (next >= moveHistory.length) setViewingMoveIndex(null);
-                  else setViewingMoveIndex(next);
-                }}
-                disabled={viewingMoveIndex === null}
-                title="Next"
-                className="p-1.5 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-lg"
-              >
-                ›
-              </button>
-              <button
-                onClick={() => setViewingMoveIndex(null)}
-                disabled={viewingMoveIndex === null}
-                title="Latest"
-                className="p-1.5 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-xs font-bold"
-              >
-                ⏭
-              </button>
             </div>
           )}
 
@@ -524,21 +704,7 @@ export default function Game() {
 
             {(isIdle || isFinding) && (
               <div className="space-y-2">
-                <div className="grid grid-cols-4 gap-1 rounded-xl overflow-hidden border border-[#1a2235]">
-                  {(Object.keys(TIME_CONTROLS) as TimeControlKey[]).map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedTimeControl(key)}
-                      className={`py-2 text-xs font-semibold capitalize transition-colors ${
-                        selectedTimeControl === key
-                          ? "bg-indigo-600 text-white"
-                          : "bg-[#1c2333] text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      {key}
-                    </button>
-                  ))}
-                </div>
+                <TimeControlPicker value={selectedTimeControl} onChange={setSelectedTimeControl} compact />
                 {isFinding ? (
                   <button
                     onClick={resetGame}
@@ -589,67 +755,53 @@ export default function Game() {
         </div>
 
         {/* ── Right Panel ── */}
-        <div className="hidden lg:flex flex-col w-[260px] flex-shrink-0 bg-[#111827] border-l border-[#1a2235] overflow-y-auto">
-          {isPlaying ? (
-            <div className="p-4 space-y-4">
-              {/* Your card + clock */}
-              <div className="rounded-xl bg-[#1c2333] border border-[#2a3547] p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
-                      {user.username[0]?.toUpperCase()}
-                    </div>
-                    <div
-                      className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1c2333] ${
-                        isConnected ? "bg-emerald-400" : "bg-red-400"
-                      }`}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-bold text-slate-100 truncate">{user.username}</div>
-                    <div className="text-xs text-slate-500">
-                      {playerColor === "white" ? "♔" : "♚"} {playerColor}
-                    </div>
-                  </div>
-                  <div className="text-sm font-black text-indigo-400 flex-shrink-0">
-                    {user.rating}
-                  </div>
-                </div>
-
-                {/* My clock — highlighted when active */}
-                <div
-                  className={`rounded-xl px-4 py-3.5 text-center transition-all ${
-                    myClockActive
-                      ? "bg-indigo-600 shadow-lg shadow-indigo-600/30"
-                      : "bg-[#131929] border border-[#1a2235]"
-                  }`}
-                >
-                  <span
-                    className={`font-mono text-4xl font-black tabular-nums tracking-wide ${
-                      myClockActive ? "text-white" : "text-slate-500"
+        <div className="hidden lg:flex flex-col w-[280px] flex-shrink-0 bg-[#111827] border-l border-[#1a2235]">
+          {isFinished ? (
+            <GameResultPanel
+              winner={botMode ? localWinner : winner}
+              playerColor={botMode ? 'white' : playerColor}
+              reason={botMode ? (localGameOverReason ?? '') : (gameOverReason ?? '')}
+              winningMove={displayMoveHistory.length > 0 ? displayMoveHistory[displayMoveHistory.length - 1] ?? null : null}
+              myRatingChange={botMode ? null : (playerColor === 'white' ? ratingChanges.white : ratingChanges.black)}
+              onPlayAgain={() => {
+                if (botMode) { startBotGame(botDifficulty); } else { resetGame(); startMatchMaking(selectedTimeControl); }
+              }}
+            />
+          ) : isPlaying ? (
+            <>
+              {/* Tabs */}
+              <div className="flex border-b border-[#1a2235] flex-shrink-0">
+                {(['moves', 'chat', 'info'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-3 text-xs font-semibold capitalize transition-colors ${
+                      activeTab === tab
+                        ? 'text-slate-100 border-b-2 border-indigo-500'
+                        : 'text-slate-500 hover:text-slate-300'
                     }`}
                   >
-                    {formatTime(myTime)}
-                  </span>
-                </div>
+                    {tab}
+                  </button>
+                ))}
               </div>
 
-              {/* Draw offer */}
+              {/* Draw offer banner */}
               {drawOfferFromOpponent && (
-                <div className="rounded-xl bg-indigo-950/60 border border-indigo-700/40 p-3 space-y-2">
-                  <p className="text-xs font-semibold text-indigo-300 text-center">
+                <div className="p-3 bg-indigo-950/60 border-b border-indigo-700/40 flex-shrink-0">
+                  <p className="text-xs font-semibold text-indigo-300 text-center mb-2">
                     Opponent offers a draw
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={acceptDraw}
-                      className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors"
+                      className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors"
                     >
                       Accept
                     </button>
                     <button
                       onClick={declineDraw}
-                      className="flex-1 py-2 rounded-lg bg-[#1c2333] border border-[#2a3547] text-slate-400 hover:text-slate-200 text-xs font-bold transition-colors"
+                      className="flex-1 py-1.5 bg-[#1c2333] border border-[#2a3547] text-slate-400 hover:text-slate-200 text-xs font-bold rounded-lg transition-colors"
                     >
                       Decline
                     </button>
@@ -657,67 +809,124 @@ export default function Game() {
                 </div>
               )}
 
-              {/* Game Actions */}
-              <div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                  Game Actions
-                </div>
-                <div className="space-y-2">
-                  {!drawOfferPending && !drawOfferFromOpponent && (
-                    <button
-                      onClick={offerDraw}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#1c2333] border border-[#2a3547] hover:border-indigo-500/40 hover:bg-[#222d42] text-slate-300 hover:text-white text-sm font-semibold transition-all"
-                    >
-                      <span className="text-base">🤝</span>
-                      Offer Draw
-                    </button>
-                  )}
-                  {drawOfferPending && (
-                    <div className="px-4 py-3 rounded-xl bg-[#1c2333] border border-indigo-500/20 text-xs text-indigo-400 font-medium text-center">
-                      Draw offer sent…
+              {/* Tab content */}
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {activeTab === 'moves' && (
+                  <MoveHistory
+                    moves={displayMoveHistory}
+                    selectedMoveIndex={viewingMoveIndex}
+                    onMoveSelect={(idx) => setViewingMoveIndex(idx)}
+                  />
+                )}
+                {activeTab === 'chat' && (
+                  <div className="flex-1 flex items-center justify-center text-slate-600 text-sm">
+                    Chat coming soon
+                  </div>
+                )}
+                {activeTab === 'info' && (
+                  <div className="flex-1 p-4 space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Time control</span>
+                      <span className="text-slate-200 font-semibold capitalize">{TIME_CONTROLS[selectedTimeControl].minutes} min · {TIME_CONTROLS[selectedTimeControl].category}</span>
                     </div>
-                  )}
-                  <button
-                    onClick={resign}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-950/40 border border-red-800/30 hover:bg-red-950/70 hover:border-red-700/50 text-red-400 hover:text-red-300 text-sm font-semibold transition-all"
-                  >
-                    <span className="text-base">🏳️</span>
-                    Resign
-                  </button>
-                </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">You play as</span>
+                      <span className="text-slate-200 font-semibold capitalize">{playerColor}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Your rating</span>
+                      <span className="text-indigo-400 font-bold">{user.rating}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Board Themes */}
-              <div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                  Board Theme
-                </div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {(Object.keys(BOARD_THEMES) as BoardTheme[]).map((theme) => (
-                    <button
-                      key={theme}
-                      title={BOARD_THEME_LABELS[theme]}
-                      onClick={() => setBoardTheme(theme)}
-                      className={`relative rounded-lg overflow-hidden border-2 transition-all h-10 ${
-                        boardTheme === theme
-                          ? "border-indigo-500 scale-105"
-                          : "border-[#2a3547] hover:border-slate-500"
-                      }`}
-                    >
-                      <div className="grid grid-cols-2 grid-rows-2 h-full">
-                        <div style={{ backgroundColor: BOARD_THEMES[theme].light }} />
-                        <div style={{ backgroundColor: BOARD_THEMES[theme].dark }} />
-                        <div style={{ backgroundColor: BOARD_THEMES[theme].dark }} />
-                        <div style={{ backgroundColor: BOARD_THEMES[theme].light }} />
-                      </div>
-                    </button>
-                  ))}
-                </div>
+              {/* Nav controls */}
+              <div className="flex-shrink-0 border-t border-[#1a2235] flex items-center justify-center gap-1 p-3">
+                <button
+                  onClick={() => setViewingMoveIndex(0)}
+                  disabled={(viewingMoveIndex ?? displayMoveHistory.length - 1) <= 0}
+                  title="First move"
+                  className="p-2 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-xs font-bold"
+                >
+                  ⏮
+                </button>
+                <button
+                  onClick={() =>
+                    setViewingMoveIndex(
+                      Math.max(0, (viewingMoveIndex ?? displayMoveHistory.length - 1) - 1)
+                    )
+                  }
+                  disabled={(viewingMoveIndex ?? displayMoveHistory.length - 1) <= 0}
+                  title="Previous"
+                  className="p-2 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-lg"
+                >
+                  ‹
+                </button>
+                <span className="px-3 py-1 rounded bg-[#1c2333] text-xs font-mono text-slate-400 min-w-[60px] text-center">
+                  {viewingMoveIndex === null
+                    ? `${Math.ceil(displayMoveHistory.length / 2)} / ${Math.ceil(displayMoveHistory.length / 2)}`
+                    : `${Math.ceil((viewingMoveIndex + 1) / 2)} / ${Math.ceil(displayMoveHistory.length / 2)}`}
+                </span>
+                <button
+                  onClick={() => {
+                    const next = (viewingMoveIndex ?? displayMoveHistory.length - 1) + 1;
+                    if (next >= displayMoveHistory.length) setViewingMoveIndex(null);
+                    else setViewingMoveIndex(next);
+                  }}
+                  disabled={viewingMoveIndex === null}
+                  title="Next"
+                  className="p-2 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-lg"
+                >
+                  ›
+                </button>
+                <button
+                  onClick={() => setViewingMoveIndex(null)}
+                  disabled={viewingMoveIndex === null}
+                  title="Latest"
+                  className="p-2 rounded hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-slate-400 hover:text-slate-200 transition-colors text-xs font-bold"
+                >
+                  ⏭
+                </button>
               </div>
-            </div>
+
+              {/* Draw / Resign */}
+              <div className="flex-shrink-0 border-t border-[#1a2235] flex items-center gap-2 p-3">
+                {botMode ? (
+                  <button
+                    onClick={resetBotGame}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-950/40 border border-red-800/30 hover:bg-red-950/70 text-red-400 text-xs font-bold transition-all"
+                  >
+                    🏳 Quit Game
+                  </button>
+                ) : (
+                  <>
+                    {!drawOfferPending && !drawOfferFromOpponent && (
+                      <button
+                        onClick={offerDraw}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#1c2333] border border-[#2a3547] hover:border-indigo-500/40 text-slate-300 text-xs font-bold transition-all"
+                      >
+                        ½ Draw
+                      </button>
+                    )}
+                    {drawOfferPending && (
+                      <div className="flex-1 py-2.5 text-center text-xs text-indigo-400 font-medium">
+                        Draw offered…
+                      </div>
+                    )}
+                    <button
+                      onClick={resign}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-950/40 border border-red-800/30 hover:bg-red-950/70 text-red-400 text-xs font-bold transition-all"
+                    >
+                      🏳 Resign
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
           ) : (
             /* Idle right panel */
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
               {/* User card */}
               <div className="rounded-xl bg-[#1c2333] border border-[#2a3547] p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -808,19 +1017,6 @@ export default function Game() {
           )}
         </div>
       </main>
-
-      <GameOverModal
-        show={status === "finished" && !!gameOverReason}
-        winner={winner}
-        playerColor={playerColor}
-        reason={gameOverReason ?? ""}
-        whiteRatingChange={ratingChanges.white}
-        blackRatingChange={ratingChanges.black}
-        onPlayAgain={() => {
-          resetGame();
-          startMatchMaking(selectedTimeControl);
-        }}
-      />
 
       <LobbyModal
         show={showLobbyModal}

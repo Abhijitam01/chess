@@ -74,7 +74,6 @@ export class Game {
     this.initializeGame();
   }
 
-  /** Reassign a socket when a player reconnects mid-game. */
   reconnectPlayer(socket: WebSocket, userId: string): void {
     if (userId === this.whitePlayerId) {
       this.player1 = socket;
@@ -82,8 +81,7 @@ export class Game {
       this.player2 = socket;
     }
 
-    // Send current game state so the client can restore the board
-    const state = JSON.stringify({
+    socket.send(JSON.stringify({
       type: INIT_GAME,
       payload: {
         color: userId === this.whitePlayerId ? 'white' : 'black',
@@ -92,15 +90,12 @@ export class Game {
         blackTime: this.blackTime,
         resumed: true,
       },
-    });
-    socket.send(state);
+    }));
 
-    // Send immediate clock sync so the reconnecting client doesn't wait up to 3s
-    const sync = JSON.stringify({
+    socket.send(JSON.stringify({
       type: CLOCK_SYNC,
       payload: { whiteTime: this.whiteTime, blackTime: this.blackTime, serverTs: Date.now() },
-    });
-    socket.send(sync);
+    }));
   }
 
   isFinished(): boolean {
@@ -113,7 +108,6 @@ export class Game {
 
   private async initializeGame(): Promise<void> {
     try {
-      // Load actual ratings
       const [white, black] = await Promise.all([
         this.dbService.getProfileById(this.whitePlayerId),
         this.dbService.getProfileById(this.blackPlayerId),
@@ -139,7 +133,6 @@ export class Game {
         this.blackTime,
       );
 
-      // Notify players (after we know the gameId)
       const whiteMsg = JSON.stringify({ type: INIT_GAME, payload: { color: 'white', gameId: this.gameId } });
       const blackMsg = JSON.stringify({ type: INIT_GAME, payload: { color: 'black', gameId: this.gameId } });
       this.player1.send(whiteMsg);
@@ -228,7 +221,6 @@ export class Game {
       const uci = `${moveResult.from}${moveResult.to}`;
       const fen = this.engine.getBoard().fen();
 
-      // Publish to Redis (awaited — Redis is the source of truth for live state)
       if (this.gameId) {
         await this.redisService.publishMove(
           this.gameId,
@@ -240,7 +232,6 @@ export class Game {
         );
       }
 
-      // Persist to DB fire-and-forget — DB is a secondary store, don't block the move ACK
       if (this.gameId) {
         this.dbService.saveMove(
           this.gameId,
@@ -253,7 +244,6 @@ export class Game {
         ).catch((err) => logger.error({ err }, '[Game] saveMove failed'));
       }
 
-      // Broadcast move to both players
       const moveMsg = JSON.stringify({
         type: MOVE,
         payload: {
@@ -301,7 +291,6 @@ export class Game {
         );
       }
 
-      // Update both players' ratings and stats
       const whiteOutcome = winner === 'white' ? 'win' : winner === 'black' ? 'loss' : 'draw';
       const blackOutcome = winner === 'black' ? 'win' : winner === 'white' ? 'loss' : 'draw';
       updates.push(
@@ -437,17 +426,8 @@ export class Game {
   }
 
   private calcRatingChanges(winner: string | null): { whiteChange: number; blackChange: number } {
-    let whiteActual: 1 | 0 | 0.5;
-    let blackActual: 1 | 0 | 0.5;
-
-    if (winner === 'white') {
-      whiteActual = 1; blackActual = 0;
-    } else if (winner === 'black') {
-      whiteActual = 0; blackActual = 1;
-    } else {
-      whiteActual = 0.5; blackActual = 0.5;
-    }
-
+    const whiteActual: 1 | 0 | 0.5 = winner === 'white' ? 1 : winner === 'black' ? 0 : 0.5;
+    const blackActual: 1 | 0 | 0.5 = winner === 'black' ? 1 : winner === 'white' ? 0 : 0.5;
     return {
       whiteChange: calcElo(this.whiteRating, this.blackRating, whiteActual),
       blackChange: calcElo(this.blackRating, this.whiteRating, blackActual),

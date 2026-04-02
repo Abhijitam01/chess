@@ -5,8 +5,6 @@ export class DatabaseService {
     await prisma.$queryRaw`SELECT 1`;
   }
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-
   async createProfileWithCredentials(username: string, passwordHash: string) {
     return prisma.$transaction(async (tx) => {
       const profile = await tx.profile.create({ data: { username } });
@@ -21,8 +19,6 @@ export class DatabaseService {
       include: { credentials: true },
     });
   }
-
-  // ── Profile ─────────────────────────────────────────────────────────────────
 
   async getProfileByUsername(username: string) {
     return prisma.profile.findUnique({ where: { username } });
@@ -60,7 +56,7 @@ export class DatabaseService {
     whiteRating: number,
     blackRating: number,
   ) {
-    return await prisma.game.create({
+    return prisma.game.create({
       data: {
         whitePlayerId,
         blackPlayerId,
@@ -82,7 +78,7 @@ export class DatabaseService {
     whiteTime: number,
     blackTime: number,
   ) {
-    return await prisma.gameMove.create({
+    return prisma.gameMove.create({
       data: {
         gameId,
         moveNumber,
@@ -103,14 +99,14 @@ export class DatabaseService {
     whiteRatingChange: number,
     blackRatingChange: number,
   ) {
-    return await prisma.game.update({
+    return prisma.game.update({
       where: { id: gameId },
       data: { winner, resultReason: reason, pgn, whiteRatingChange, blackRatingChange, finishedAt: new Date() },
     });
   }
 
   async getUserGames(userId: string, limit = 10) {
-    return await prisma.game.findMany({
+    return prisma.game.findMany({
       where: {
         OR: [
           { whitePlayerId: userId },
@@ -127,14 +123,14 @@ export class DatabaseService {
   }
 
   async getGameMoves(gameId: string) {
-    return await prisma.gameMove.findMany({
+    return prisma.gameMove.findMany({
       where: { gameId },
       orderBy: { moveNumber: "asc" },
     });
   }
 
   async getLeaderboard(limit = 50) {
-    return await prisma.profile.findMany({
+    return prisma.profile.findMany({
       orderBy: { rating: "desc" },
       take: limit,
       select: {
@@ -150,7 +146,7 @@ export class DatabaseService {
   }
 
   async getProfileStats(username: string) {
-    const profile = await prisma.profile.findUnique({
+    return prisma.profile.findUnique({
       where: { username },
       select: {
         id: true,
@@ -162,6 +158,5 @@ export class DatabaseService {
         totalGames: true,
       },
     });
-    return profile;
   }
 }

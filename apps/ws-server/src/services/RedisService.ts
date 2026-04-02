@@ -56,7 +56,6 @@ export type IncomingGameAction =
 export class RedisService {
   private client: Redis;
   private subClient: Redis;
-  // Single generic dispatcher — maps channel → raw message handler
   private channelHandlers = new Map<string, (raw: string) => void>();
 
   constructor() {
@@ -78,14 +77,13 @@ export class RedisService {
       logger.error({ err }, '[Redis] sub error');
     });
 
-    // Single top-level dispatcher — registered once, never duplicated
     this.subClient.on('message', (channel, raw) => {
       const handler = this.channelHandlers.get(channel);
       if (handler) {
         try {
           handler(raw);
         } catch {
-          // ignore malformed messages
+          // ignore
         }
       }
     });
@@ -191,8 +189,6 @@ export class RedisService {
     ]);
   }
 
-  // ── Spectator: live move events ──────────────────────────────────────────
-
   subscribeToGame(gameId: string, callback: (event: LiveMoveEvent) => void): void {
     const channel = `game:${gameId}:live`;
     this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as LiveMoveEvent));
@@ -207,11 +203,8 @@ export class RedisService {
     this.subClient.unsubscribe(channel).catch(() => {});
   }
 
-  // ── Matchmaking queue ─────────────────────────────────────────────────────
-
   async enqueueForMatchmaking(userId: string, timeControl: TimeControlKey = DEFAULT_TIME_CONTROL): Promise<void> {
     const key = matchmakingQueueKey(timeControl);
-    // Remove any stale entry first to avoid duplicates
     await this.client.lrem(key, 0, userId);
     await this.client.lpush(key, userId);
   }
@@ -220,10 +213,6 @@ export class RedisService {
     await this.client.lrem(matchmakingQueueKey(timeControl), 0, userId);
   }
 
-  /**
-   * Atomically pop a pair of users from the given time-control queue.
-   * Returns [user1, user2] if two are available, null otherwise.
-   */
   async tryDequeueMatchedPair(timeControl: TimeControlKey = DEFAULT_TIME_CONTROL): Promise<[string, string] | null> {
     const key = matchmakingQueueKey(timeControl);
     const script = `
@@ -239,8 +228,6 @@ export class RedisService {
     if (!result || result.length < 2 || !result[0] || !result[1]) return null;
     return [result[0], result[1]];
   }
-
-  // ── User notification channels (cross-node match signalling) ─────────────
 
   subscribeToUserNotify(userId: string, callback: (msg: MatchFoundNotification) => void): void {
     const channel = `user:${userId}:notify`;
@@ -260,12 +247,6 @@ export class RedisService {
     await this.client.publish(`user:${userId}:notify`, JSON.stringify(msg));
   }
 
-  // ── Cross-node move routing ───────────────────────────────────────────────
-
-  /**
-   * Non-owner nodes publish incoming moves here.
-   * The game-owner node processes them and publishes results to game:{id}:events.
-   */
   async publishMoveToGame(gameId: string, action: IncomingGameAction): Promise<void> {
     await this.client.publish(`game:${gameId}:moves_in`, JSON.stringify(action));
   }
@@ -284,44 +265,11 @@ export class RedisService {
     this.subClient.unsubscribe(channel).catch(() => {});
   }
 
-  /**
-   * Game owner publishes processed game events (moves, game_over, time_update).
-   * All nodes with local sockets for a game subscribe here to forward events.
-   */
-  async publishGameEvent(gameId: string, event: Record<string, unknown>): Promise<void> {
-    await this.client.publish(`game:${gameId}:events`, JSON.stringify(event));
-  }
-
-  subscribeToGameEvents(gameId: string, callback: (event: Record<string, unknown>) => void): void {
-    const channel = `game:${gameId}:events`;
-    this.channelHandlers.set(channel, (raw) => callback(JSON.parse(raw) as Record<string, unknown>));
-    this.subClient.subscribe(channel).catch((err) => {
-      logger.error({ err, channel }, '[Redis] failed to subscribe');
-    });
-  }
-
-  unsubscribeFromGameEvents(gameId: string): void {
-    const channel = `game:${gameId}:events`;
-    this.channelHandlers.delete(channel);
-    this.subClient.unsubscribe(channel).catch(() => {});
-  }
-
-  // ── Private lobby ─────────────────────────────────────────────────────────
-
-  /**
-   * Store a lobby code → creatorId with 10-minute TTL.
-   * Uses NX so two colliding codes don't overwrite each other.
-   * Returns true if the key was set, false if a collision occurred.
-   */
   async createLobby(code: string, creatorId: string): Promise<boolean> {
     const result = await this.client.set(`lobby:${code}`, creatorId, 'EX', 600, 'NX');
     return result === 'OK';
   }
 
-  /**
-   * Atomically GET the creatorId and DELETE the lobby key.
-   * Returns the creatorId, or null if the code is unknown/expired.
-   */
   async popLobby(code: string): Promise<string | null> {
     const script = `
       local v = redis.call('GET', KEYS[1])
@@ -334,8 +282,6 @@ export class RedisService {
     const result = await this.client.eval(script, 1, `lobby:${code}`);
     return typeof result === 'string' ? result : null;
   }
-
-  // ── Direct game messages to a specific user (cross-node INIT_GAME, etc.) ──
 
   async publishGameMessageToUser(userId: string, message: string): Promise<void> {
     await this.client.publish(`user:${userId}:game_msg`, message);

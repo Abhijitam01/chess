@@ -64,7 +64,7 @@ export const MoveHistory = memo(function MoveHistory({ moves, selectedMoveIndex,
                         font-mono text-[13px] px-2 py-1 rounded text-left
                         transition-all duration-100
                         ${isSelected || isLatest
-                          ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                          ? 'bg-indigo-500/20 text-indigo-400 font-semibold'
                           : 'text-zinc-200 hover:bg-white/[0.06]'
                         }
                       `}
@@ -87,7 +87,7 @@ export const MoveHistory = memo(function MoveHistory({ moves, selectedMoveIndex,
                           font-mono text-[13px] px-2 py-1 rounded text-left
                           transition-all duration-100
                           ${isSelected || isLatest
-                            ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                            ? 'bg-indigo-500/20 text-indigo-400 font-semibold'
                             : 'text-zinc-200 hover:bg-white/[0.06]'
                           }
                         `}

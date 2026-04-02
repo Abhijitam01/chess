@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ── vi.hoisted ensures these are available before vi.mock factories run ───────
-
 const mocks = vi.hoisted(() => {
   const mockOn = vi.fn();
   const mockConnect = vi.fn().mockResolvedValue(undefined);
@@ -65,15 +63,11 @@ vi.mock("../config.js", () => ({
 
 import { RedisService } from "../services/RedisService.js";
 
-// ── Helper: capture the 'message' dispatcher registered on the sub-client ────
-
 function captureMessageDispatcher(): (channel: string, raw: string) => void {
   const call = mocks.mockOn.mock.calls.find(([event]: [string, ...unknown[]]) => event === "message");
   if (!call) throw new Error("No 'message' listener registered on sub-client");
   return call[1] as (channel: string, raw: string) => void;
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("RedisService.initGame", () => {
   let svc: RedisService;

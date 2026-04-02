@@ -13,15 +13,13 @@ import { DatabaseService } from "./services/DatabaseService.js";
 import { RedisService, type MatchFoundNotification, type IncomingGameAction } from "./services/RedisService.js";
 import { logger } from "./logger.js";
 
-// ── Input validation schemas ─────────────────────────────────────────────────
-
 const MovePayloadSchema = z.object({
   from: z.string().min(2).max(2),
   to: z.string().min(2).max(2),
   promotion: z.string().optional(),
 });
 
-const TimeControlKeySchema = z.enum(['bullet', 'blitz', 'rapid', 'classical']);
+const TimeControlKeySchema = z.enum(['bullet_1', 'bullet_2', 'blitz_3', 'blitz_5', 'rapid_10', 'rapid_15', 'rapid_20', 'rapid_30', 'classical_45', 'classical_60']);
 
 const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal(INIT_GAME), timeControl: TimeControlKeySchema.optional() }),
@@ -34,8 +32,6 @@ const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal(JOIN_LOBBY), code: z.string().length(6).regex(/^[0-9a-f]{6}$/) }),
 ]);
 
-// ── Rate limiter (token bucket, 10 msgs/s per socket) ───────────────────────
-
 interface RateBucket {
   tokens: number;
   lastRefill: number;
@@ -44,10 +40,6 @@ interface RateBucket {
 
 const RATE_LIMIT = 10;
 const OVERAGE_CLOSE_THRESHOLD = 5;
-
-// ── Remote player proxy ──────────────────────────────────────────────────────
-// Implements just enough of the WebSocket interface for Game to route messages
-// to a player whose socket lives on a different server node.
 
 class RemotePlayerProxy {
   readonly readyState = 1 as const; // OPEN
@@ -64,30 +56,19 @@ class RemotePlayerProxy {
   }
 }
 
-// ── GameManager ──────────────────────────────────────────────────────────────
-
 export class GameManager {
-  /** Games whose engine runs on this node. */
   private games: Game[] = [];
-  /** socket → userId for every player connected to this node. */
   private socketToUserId: Map<WebSocket, string> = new Map();
-  /** userId → socket (reverse of socketToUserId). */
   private userIdToSocket: Map<string, WebSocket> = new Map();
-  /** userId → Game for locally-owned games. */
   private userIdToGame: Map<string, Game> = new Map();
-  /** userId → gameId for games owned by a remote node. */
   private remoteGameIds: Map<string, string> = new Map();
-  /** Spectator sockets per gameId. */
   private spectatorSockets: Map<string, Set<WebSocket>> = new Map();
-  /** Per-socket token buckets. */
   private rateBuckets: Map<WebSocket, RateBucket> = new Map();
 
   constructor(
     private readonly dbService: DatabaseService,
     private readonly redisService: RedisService,
   ) {}
-
-  // ── Public API ─────────────────────────────────────────────────────────────
 
   addUserToGame(socket: WebSocket, userId: string): void {
     this.socketToUserId.set(socket, userId);
@@ -129,19 +110,15 @@ export class GameManager {
 
     if (userId) {
       this.userIdToSocket.delete(userId);
-      // Clean up per-user Redis subscriptions so they don't fire on a dead socket
       this.redisService.unsubscribeFromUserNotify(userId);
       this.redisService.unsubscribeFromUserGameMessages(userId);
       this.remoteGameIds.delete(userId);
     }
-    // userIdToGame is intentionally NOT cleared — player may reconnect to local game
   }
-
-  // ── Rate limiting ──────────────────────────────────────────────────────────
 
   private checkRateLimit(socket: WebSocket): boolean {
     const bucket = this.rateBuckets.get(socket);
-    if (!bucket) return true; // spectators have no bucket — allow
+    if (!bucket) return true;
 
     const now = Date.now();
     const elapsed = (now - bucket.lastRefill) / 1000;
@@ -160,8 +137,6 @@ export class GameManager {
     bucket.overageStreak = 0;
     return true;
   }
-
-  // ── Message handler ────────────────────────────────────────────────────────
 
   private addHandler(socket: WebSocket, userId: string): void {
     socket.on("message", async (data) => {
@@ -189,7 +164,6 @@ export class GameManager {
             if (localGame.isFinished()) this.cleanupGame(localGame);
             break;
           }
-          // Game lives on a remote node — forward via Redis
           const remoteId = this.remoteGameIds.get(userId);
           if (remoteId) {
             await this.redisService.publishMoveToGame(remoteId, {
@@ -268,10 +242,7 @@ export class GameManager {
     });
   }
 
-  // ── Matchmaking ────────────────────────────────────────────────────────────
-
   private async handleInitGame(socket: WebSocket, userId: string, timeControl: TimeControlKey = DEFAULT_TIME_CONTROL): Promise<void> {
-    // 1. Reconnect to a game this node owns
     const existingGame = this.userIdToGame.get(userId);
     if (existingGame && !existingGame.isFinished()) {
       existingGame.reconnectPlayer(socket, userId);
@@ -279,29 +250,24 @@ export class GameManager {
       return;
     }
 
-    // 2. Reconnect to a game owned by a remote node
     const remoteGameId = this.remoteGameIds.get(userId);
     if (remoteGameId) {
       this.forwardUserGameMessages(userId, socket);
       return;
     }
 
-    // 3. Clean up any stale Redis active-game entry
     const activeGameId = await this.redisService.getActiveGameForUser(userId);
     if (activeGameId) {
       await this.redisService.finishGame(activeGameId, userId, userId);
     }
 
-    // 4. Enqueue in the time-control-specific matchmaking queue (idempotent)
     await this.redisService.enqueueForMatchmaking(userId, timeControl);
 
-    // 5. Atomically try to dequeue a matched pair from the same time-control queue
     const pair = await this.redisService.tryDequeueMatchedPair(timeControl);
     if (pair) {
       const [userA, userB] = pair;
       await this.createGameForMatch(userA, userB, timeControl);
     } else {
-      // Wait for a cross-node match_found notification
       this.redisService.subscribeToUserNotify(userId, (notification) => {
         this.handleMatchNotification(userId, notification).catch((err) =>
           logger.error({ err, userId }, '[GameManager] handleMatchNotification error'),
@@ -310,10 +276,6 @@ export class GameManager {
     }
   }
 
-  /**
-   * This node won the race and will own the game.
-   * Either or both players may have sockets on remote nodes.
-   */
   private async createGameForMatch(
     whiteUserId: string,
     blackUserId: string,
@@ -340,14 +302,10 @@ export class GameManager {
     );
 
     this.games.push(game);
-    // Register locally so moves from this node's sockets route directly
     if (whiteSocket) this.userIdToGame.set(whiteUserId, game);
     if (blackSocket) this.userIdToGame.set(blackUserId, game);
   }
 
-  /**
-   * Fires once the DB record is created and we have a stable gameId.
-   */
   private onGameReady(
     gameId: string,
     game: Game,
@@ -358,14 +316,12 @@ export class GameManager {
     timeControl: TimeControlKey = DEFAULT_TIME_CONTROL,
   ): void {
     const initialTimeMs = TIME_CONTROLS[timeControl].initialTimeMs;
-    // Subscribe to incoming actions from remote nodes
     this.redisService.subscribeToGameMovesIn(gameId, (action) => {
       this.handleIncomingAction(action, game).catch((err) =>
         logger.error({ err, gameId }, '[GameManager] handleIncomingAction error'),
       );
     });
 
-    // Notify remote players of the gameId so they can start forwarding messages
     if (!whiteIsLocal) {
       this.redisService
         .publishToUser(whiteUserId, {
@@ -390,9 +346,6 @@ export class GameManager {
     }
   }
 
-  /**
-   * Called on a non-owner node when match_found arrives via user notify channel.
-   */
   private async handleMatchNotification(
     userId: string,
     notification: MatchFoundNotification,
@@ -406,7 +359,6 @@ export class GameManager {
     this.forwardUserGameMessages(userId, socket);
   }
 
-  /** Subscribe to Redis game messages for a user and pipe them to their local socket. */
   private forwardUserGameMessages(userId: string, socket: WebSocket): void {
     this.redisService.subscribeToUserGameMessages(userId, (msg) => {
       if (socket.readyState === socket.OPEN) {
@@ -415,7 +367,6 @@ export class GameManager {
     });
   }
 
-  /** Handle a game action that arrived from a remote node via moves_in channel. */
   private async handleIncomingAction(action: IncomingGameAction, game: Game): Promise<void> {
     if (game.isFinished()) return;
 
@@ -448,10 +399,7 @@ export class GameManager {
     }
   }
 
-  // ── Lobby ───────────────────────────────────────────────────────────────────
-
   private async handleCreateLobby(socket: WebSocket, userId: string): Promise<void> {
-    // Retry on the rare collision (birthday probability ~1/16M for 6-char hex)
     let code: string;
     let stored = false;
     let attempts = 0;
@@ -479,13 +427,11 @@ export class GameManager {
     }
 
     if (creatorId === userId) {
-      // Creator joined their own code — treat as LOBBY_NOT_FOUND to avoid self-game
       socket.send(JSON.stringify({ type: LOBBY_NOT_FOUND }));
       return;
     }
 
     logger.info({ creatorId, joinerId: userId, code }, '[GameManager] lobby joined — creating game');
-    // Creator is white, joiner is black (deterministic); lobby games default to blitz
     await this.createGameForMatch(creatorId, userId, DEFAULT_TIME_CONTROL);
   }
 

@@ -57,7 +57,6 @@ export function createAuthHandler(
     const url = req.url ?? '';
     const method = req.method ?? '';
 
-    // CORS preflight
     if (method === 'OPTIONS') {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
@@ -68,7 +67,6 @@ export function createAuthHandler(
       return;
     }
 
-    // Health check (both /health and /healthz for k8s liveness probes)
     if ((url === '/health' || url === '/healthz') && method === 'GET') {
       const [dbOk, redisOk] = await Promise.all([
         dbService.ping().then(() => true).catch(() => false),
@@ -81,8 +79,6 @@ export function createAuthHandler(
       sendJson(res, 200, { success: true, data: { status: 'ok', db: true, redis: true } });
       return;
     }
-
-    // ── Auth ──────────────────────────────────────────────────────────────────
 
     if (method === 'POST' && (url === '/auth/signup' || url === '/auth/signin')) {
       let body: Record<string, unknown>;
@@ -118,8 +114,6 @@ export function createAuthHandler(
       return;
     }
 
-    // ── Leaderboard ───────────────────────────────────────────────────────────
-
     if (method === 'GET' && url.startsWith('/leaderboard')) {
       const params = new URLSearchParams(url.split('?')[1] ?? '');
       const limit = Math.min(parseInt(params.get('limit') ?? '50', 10), 100);
@@ -132,8 +126,6 @@ export function createAuthHandler(
       }
       return;
     }
-
-    // ── Profile ───────────────────────────────────────────────────────────────
 
     const profileMatch = /^\/profile\/([^/?]+)$/.exec(url);
     if (method === 'GET' && profileMatch) {
@@ -153,14 +145,11 @@ export function createAuthHandler(
       return;
     }
 
-    // ── Active Games ──────────────────────────────────────────────────────────
-
     if (method === 'GET' && url === '/games/active') {
       try {
         const gameIds = await redisService.getActiveGames();
         const states = await Promise.all(gameIds.map((id) => redisService.getGameState(id)));
 
-        // Batch-load all player profiles in one query
         const playerIds = states.flatMap((s) => s ? [s.whitePlayerId, s.blackPlayerId] : []);
         const profiles = playerIds.length > 0 ? await dbService.getProfilesByIds(playerIds) : {};
 
@@ -184,8 +173,6 @@ export function createAuthHandler(
       }
       return;
     }
-
-    // ── Game Moves ────────────────────────────────────────────────────────────
 
     const gameMoveMatch = /^\/games\/([^/?]+)\/moves$/.exec(url);
     if (method === 'GET' && gameMoveMatch) {

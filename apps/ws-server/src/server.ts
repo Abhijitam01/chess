@@ -41,8 +41,7 @@ export function createServer(deps: ServerDeps): ServerInstance {
 
     let userId: string;
     try {
-      const payload = authService.verifyToken(token);
-      userId = payload.userId;
+      userId = authService.verifyToken(token).userId;
     } catch {
       ws.send(JSON.stringify({ type: 'AUTH_ERROR', payload: { message: 'Invalid or expired token' } }));
       ws.close(1008, 'Invalid token');

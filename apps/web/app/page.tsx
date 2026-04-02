@@ -161,10 +161,16 @@ export default function HomePage() {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 600], [1, 0]);
   const heroScale = useTransform(scrollY, [0, 600], [1, 0.95]);
   const heroY = useTransform(scrollY, [0, 600], [0, 100]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("chess_token");
+    setIsLoggedIn(!!token);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -215,15 +221,23 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex items-center gap-6">
-                  <button
-                    className="hidden sm:block text-xs font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white transition-colors"
-                    onClick={() => router.push("/login")}
-                  >
-                    Login
-                  </button>
-                  <GlassButton primary className="py-3 px-8 text-sm" onClick={() => router.push("/signup")}>
-                    Play Now
-                  </GlassButton>
+                  {isLoggedIn ? (
+                    <GlassButton primary className="py-3 px-8 text-sm" onClick={() => router.push("/game")}>
+                      Dashboard
+                    </GlassButton>
+                  ) : (
+                    <>
+                      <button
+                        className="hidden sm:block text-xs font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white transition-colors"
+                        onClick={() => router.push("/login")}
+                      >
+                        Login
+                      </button>
+                      <GlassButton primary className="py-3 px-8 text-sm" onClick={() => router.push("/signup")}>
+                        Play Now
+                      </GlassButton>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.nav>
@@ -277,12 +291,20 @@ export default function HomePage() {
                     transition={{ duration: 0.8, delay: 0.8 }}
                     className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start"
                   >
-                    <GlassButton primary className="px-10 py-5" onClick={() => router.push("/game")}>
-                      Start Playing Free <ChevronRight className="w-5 h-5 ml-2" />
-                    </GlassButton>
-                    <GlassButton className="px-10 py-5" onClick={() => router.push("/signup")}>
-                      Create Account
-                    </GlassButton>
+                    {isLoggedIn ? (
+                      <GlassButton primary className="px-10 py-5" onClick={() => router.push("/game")}>
+                        Go to Dashboard <ChevronRight className="w-5 h-5 ml-2" />
+                      </GlassButton>
+                    ) : (
+                      <>
+                        <GlassButton primary className="px-10 py-5" onClick={() => router.push("/game")}>
+                          Start Playing Free <ChevronRight className="w-5 h-5 ml-2" />
+                        </GlassButton>
+                        <GlassButton className="px-10 py-5" onClick={() => router.push("/signup")}>
+                          Create Account
+                        </GlassButton>
+                      </>
+                    )}
                   </motion.div>
                 </div>
 
