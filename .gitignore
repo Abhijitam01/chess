@@ -7,3 +7,5 @@ build
 coverage
 trace.log
 *.tsbuildinfo
+.claude
+.conductor
