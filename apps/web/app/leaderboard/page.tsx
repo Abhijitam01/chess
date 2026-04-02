@@ -38,36 +38,36 @@ export default function LeaderboardPage() {
     if (rank === 1) return <span className="text-yellow-400 font-bold text-lg">🥇</span>;
     if (rank === 2) return <span className="text-gray-300 font-bold text-lg">🥈</span>;
     if (rank === 3) return <span className="text-amber-600 font-bold text-lg">🥉</span>;
-    return <span className="text-text-muted text-sm font-mono w-6 text-right">{rank}</span>;
+    return <span className="text-slate-500 text-sm font-mono w-6 text-right">{rank}</span>;
   };
 
   const winRate = (e: LeaderboardEntry) =>
     e.totalGames > 0 ? Math.round((e.wins / e.totalGames) * 100) : 0;
 
   return (
-    <main className="min-h-screen bg-background text-text-primary px-4 py-10">
+    <main className="min-h-screen bg-[#0d1117] text-slate-100 px-4 py-10">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/" className="text-text-muted hover:text-text-primary transition-colors text-sm">
+          <Link href="/" className="text-slate-500 hover:text-slate-100 transition-colors text-sm">
             ← Home
           </Link>
           <h1 className="text-2xl font-bold">Leaderboard</h1>
         </div>
 
         {loading && (
-          <div className="text-center text-text-muted py-20">Loading…</div>
+          <div className="text-center text-slate-500 py-20">Loading…</div>
         )}
 
         {error && (
-          <div className="text-center text-accent-danger py-20">{error}</div>
+          <div className="text-center text-red-400 py-20">{error}</div>
         )}
 
         {!loading && !error && (
-          <div className="card">
+          <div className="bg-[#1c2333] border border-[#2a3547] rounded-xl">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-text-muted text-xs uppercase tracking-wider">
+                <tr className="border-b border-white/10 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="py-3 px-4 text-left w-12">Rank</th>
                   <th className="py-3 px-4 text-left">Player</th>
                   <th className="py-3 px-4 text-right">Rating</th>
@@ -94,19 +94,19 @@ export default function LeaderboardPage() {
                       <td className="py-3 px-4">
                         <Link
                           href={`/profile/${encodeURIComponent(entry.username)}`}
-                          className="font-semibold text-text-primary hover:text-accent-primary transition-colors"
+                          className="font-semibold text-slate-100 hover:text-indigo-400 transition-colors"
                         >
                           {entry.username}
                         </Link>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-accent-primary">
+                      <td className="py-3 px-4 text-right font-mono font-bold text-indigo-400">
                         {entry.rating}
                       </td>
-                      <td className="py-3 px-4 text-right text-accent-emerald hidden sm:table-cell">{entry.wins}</td>
-                      <td className="py-3 px-4 text-right text-accent-danger hidden sm:table-cell">{entry.losses}</td>
-                      <td className="py-3 px-4 text-right text-text-muted hidden sm:table-cell">{entry.draws}</td>
-                      <td className="py-3 px-4 text-right text-text-secondary hidden md:table-cell">{winRate(entry)}%</td>
-                      <td className="py-3 px-4 text-right text-text-muted hidden md:table-cell">{entry.totalGames}</td>
+                      <td className="py-3 px-4 text-right text-emerald-400 hidden sm:table-cell">{entry.wins}</td>
+                      <td className="py-3 px-4 text-right text-red-400 hidden sm:table-cell">{entry.losses}</td>
+                      <td className="py-3 px-4 text-right text-slate-500 hidden sm:table-cell">{entry.draws}</td>
+                      <td className="py-3 px-4 text-right text-slate-400 hidden md:table-cell">{winRate(entry)}%</td>
+                      <td className="py-3 px-4 text-right text-slate-500 hidden md:table-cell">{entry.totalGames}</td>
                     </tr>
                   );
                 })}
@@ -114,7 +114,7 @@ export default function LeaderboardPage() {
             </table>
 
             {entries.length === 0 && (
-              <p className="text-center text-text-muted py-12">No players yet. Be the first!</p>
+              <p className="text-center text-slate-500 py-12">No players yet. Be the first!</p>
             )}
           </div>
         )}

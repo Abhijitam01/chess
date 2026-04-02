@@ -129,7 +129,7 @@ export default function SpectateLivePage() {
 
   if (isLoading || !user) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background text-text-muted">
+      <div className="h-screen flex items-center justify-center bg-[#0d1117] text-slate-500">
         Loading…
       </div>
     );
@@ -140,21 +140,21 @@ export default function SpectateLivePage() {
       {/* Nav */}
       <nav className="h-16 border-b border-white/10 bg-zinc-900/80 backdrop-blur-md flex-shrink-0 px-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/spectate" className="text-text-muted hover:text-text-primary text-sm transition-colors">
+          <Link href="/spectate" className="text-slate-500 hover:text-slate-100 text-sm transition-colors">
             ← Live Games
           </Link>
-          <span className="text-text-primary font-bold">Spectating</span>
+          <span className="text-slate-100 font-bold">Spectating</span>
           {status === "watching" && (
-            <span className="flex items-center gap-1.5 text-xs text-accent-emerald font-medium">
-              <span className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+            <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               Live
             </span>
           )}
           {status === "ended" && (
-            <span className="text-xs text-text-muted font-medium">Game ended</span>
+            <span className="text-xs text-slate-500 font-medium">Game ended</span>
           )}
         </div>
-        <div className="text-xs text-text-muted font-mono truncate max-w-[160px]">{gameId}</div>
+        <div className="text-xs text-slate-500 font-mono truncate max-w-[160px]">{gameId}</div>
       </nav>
 
       {/* Body */}
@@ -162,7 +162,7 @@ export default function SpectateLivePage() {
         {/* Board */}
         <div className="flex-1 flex items-center justify-center p-4 bg-zinc-950">
           {error ? (
-            <p className="text-accent-danger">{error}</p>
+            <p className="text-red-400">{error}</p>
           ) : (
             <div className="h-full aspect-square max-h-[85vh]">
               <ChessBoard
@@ -182,28 +182,28 @@ export default function SpectateLivePage() {
         <div className="hidden xl:flex flex-col w-[280px] border-l border-white/10 bg-zinc-900 p-4 gap-4 overflow-y-auto flex-shrink-0">
           <ChessClock whiteTime={whiteTime} blackTime={blackTime} turn={turn} />
 
-          <div className="card flex flex-col gap-2 py-3 px-4">
+          <div className="bg-[#1c2333] border border-[#2a3547] rounded-xl flex flex-col gap-2 py-3 px-4">
             <div className="flex items-center gap-2 text-sm">
               <span className="w-3 h-3 rounded-full bg-white border border-white/20" />
               <span className="font-medium">White</span>
               {turn === "w" && status === "watching" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse ml-auto" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse ml-auto" />
               )}
             </div>
             <div className="flex items-center gap-2 text-sm">
               <span className="w-3 h-3 rounded-full bg-[#1a1a1a] border border-white/40" />
               <span className="font-medium">Black</span>
               {turn === "b" && status === "watching" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse ml-auto" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse ml-auto" />
               )}
             </div>
           </div>
 
           <div className="flex flex-col flex-1 min-h-0 bg-white/[0.02] rounded-xl border border-white/5 overflow-hidden">
-            <div className="p-3 border-b border-white/5 text-xs uppercase tracking-wider font-bold text-text-muted flex items-center justify-between">
+            <div className="p-3 border-b border-white/5 text-xs uppercase tracking-wider font-bold text-slate-500 flex items-center justify-between">
               <span>Moves</span>
               {moveHistory.length > 0 && (
-                <span className="bg-white/5 px-2 py-0.5 rounded text-text-primary">
+                <span className="bg-white/5 px-2 py-0.5 rounded text-slate-100">
                   {Math.ceil(moveHistory.length / 2)}
                 </span>
               )}

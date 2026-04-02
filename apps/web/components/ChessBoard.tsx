@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import type { Chess, Square } from '@chess/chess-engine';
+import { Chess as ChessClass } from '@chess/chess-engine';
 import { ChessPiece } from './ChessPiece';
 import { BOARD_THEMES, type BoardTheme } from '../context/ThemeContext';
 
@@ -17,12 +18,25 @@ interface ChessBoardProps {
     boardTheme?: BoardTheme;
     showCoordinates?: boolean;
     readOnly?: boolean;
+    viewingMoveIndex?: number | null;
 }
 
-export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTurn, onMove, boardTheme = 'classic', showCoordinates = true, readOnly = false }: ChessBoardProps) {
+export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTurn, onMove, boardTheme = 'classic', showCoordinates = true, readOnly = false, viewingMoveIndex = null }: ChessBoardProps) {
     const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
     const [validMoves, setValidMoves] = useState<string[]>([]);
     const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
+    const [draggedFrom, setDraggedFrom] = useState<string | null>(null);
+
+    // When viewing a past move, reconstruct that board position
+    const displayChess = useMemo(() => {
+        if (viewingMoveIndex === null) return chess;
+        const moves = chess.history();
+        const c = new ChessClass();
+        for (let i = 0; i <= viewingMoveIndex && i < moves.length; i++) {
+            c.move(moves[i]!);
+        }
+        return c;
+    }, [chess, viewingMoveIndex]);
 
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -32,12 +46,14 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
 
     // Track last move from game history
     useEffect(() => {
-        const history = chess.history({ verbose: true }) as Move[];
+        const history = displayChess.history({ verbose: true }) as Move[];
         if (history.length > 0) {
             const last = history[history.length - 1]!;
             setLastMove({ from: last.from, to: last.to });
+        } else {
+            setLastMove(null);
         }
-    }, [chess]);
+    }, [displayChess]);
 
     const handleSquareClick = (square: string) => {
         if (readOnly || !isMyTurn) return;
@@ -84,6 +100,37 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
         setValidMoves([]);
     };
 
+    const handleDragStart = (e: React.DragEvent, square: string) => {
+        if (readOnly || !isMyTurn) { e.preventDefault(); return; }
+        const piece = chess.get(square as Square);
+        const yourColor = playerColor === 'white' ? 'w' : 'b';
+        if (!piece || piece.color !== yourColor) { e.preventDefault(); return; }
+        setDraggedFrom(square);
+        setSelectedSquare(square);
+        const moves = chess.moves({ square: square as Square, verbose: true });
+        setValidMoves(moves.map(m => m.to));
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, square: string) => {
+        e.preventDefault();
+        if (!draggedFrom) return;
+        if (validMoves.includes(square)) {
+            const success = onMove(draggedFrom, square);
+            if (success) {
+                setLastMove({ from: draggedFrom, to: square });
+            }
+        }
+        setDraggedFrom(null);
+        setSelectedSquare(null);
+        setValidMoves([]);
+    };
+
     const isLightSquare = (fileIndex: number, rankIndex: number): boolean => {
         return (fileIndex + rankIndex) % 2 === 0;
     };
@@ -116,10 +163,12 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
                         displayFiles.map((file, fileIndex) => {
                             const square = `${file}${rank}`;
                             const isLight = isLightSquare(fileIndex, rankIndex);
-                            const piece = chess.get(square as Square);
+                            const piece = displayChess.get(square as Square);
                             const isValidMove = validMoves.includes(square);
                             const isSelected = selectedSquare === square;
                             const isLastMoveSquare = lastMove && (lastMove.from === square || lastMove.to === square);
+                            const yourColor = playerColor === 'white' ? 'w' : 'b';
+                            const isDraggable = !readOnly && isMyTurn && !!piece && piece.color === yourColor;
 
                             // Inline styles for absolute color safety
                             const bgStyle = isSelected 
@@ -132,6 +181,10 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
                                 <div
                                     key={square}
                                     onClick={() => handleSquareClick(square)}
+                                    draggable={isDraggable}
+                                    onDragStart={(e) => handleDragStart(e, square)}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => handleDrop(e, square)}
                                     className={`
                                         relative w-full h-full flex items-center justify-center cursor-pointer
                                         ${isValidMove && piece ? 'shadow-[inset_0_0_0_4px_rgba(0,0,0,0.2)]' : ''}

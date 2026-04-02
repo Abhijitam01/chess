@@ -5,9 +5,11 @@ import { memo } from 'react';
 interface GameControlsProps {
     playerColor: 'white' | 'black' | null;
     status: 'waiting' | 'playing' | 'finished';
+    matchMakingStatus?: 'idle' | 'finding' | 'found' | 'playing' | 'finished';
     turn: 'w' | 'b';
     isMyTurn: boolean;
     onResign: () => void;
+    onCancelSearch?: () => void;
     winner?: string | null;
     reason?: string | null;
     showMatchStartAnimation?: boolean;
@@ -27,6 +29,7 @@ export const GameControls = memo(function GameControls({
     turn,
     isMyTurn,
     onResign,
+    onCancelSearch,
     winner,
     reason,
     showMatchStartAnimation,
@@ -89,7 +92,26 @@ export const GameControls = memo(function GameControls({
                                 <span>You are playing as {playerColor}</span>
                             </div>
                         )}
-                        {!showMatchStartAnimation && status === 'waiting' && "Finding an opponent..."}
+                        {!showMatchStartAnimation && status === 'waiting' && (
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="flex items-center gap-2 text-zinc-400">
+                                    <span className="inline-flex gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:0ms]" />
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:150ms]" />
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:300ms]" />
+                                    </span>
+                                    <span className="text-xs font-medium">Searching for opponent</span>
+                                </div>
+                                {onCancelSearch && (
+                                    <button
+                                        onClick={onCancelSearch}
+                                        className="px-4 py-1.5 rounded-lg border border-zinc-700 text-xs font-semibold text-zinc-400 hover:text-zinc-100 hover:border-zinc-500 transition-colors"
+                                    >
+                                        Cancel Search
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         {!showMatchStartAnimation && status === 'playing' && (isMyTurn ? "Your turn to move" : "Waiting for opponent")}
                         {!showMatchStartAnimation && status === 'finished' && (
                             <div className="flex flex-col gap-2">

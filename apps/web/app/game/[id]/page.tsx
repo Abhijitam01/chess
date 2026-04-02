@@ -10,11 +10,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 interface GameMove {
   moveNumber: number;
-  moveSan: string;
-  moveUci: string;
+  san: string;
+  uci: string;
   fen: string;
-  timeLeftWhite: number;
-  timeLeftBlack: number;
+  whiteTime: number;
+  blackTime: number;
 }
 
 function formatMs(ms: number): string {
@@ -40,7 +40,7 @@ export default function GameReplayPage() {
     const c = createChess();
     for (let i = 0; i <= cursor && i < moves.length; i++) {
       const m = moves[i]!;
-      c.move({ from: m.moveUci.slice(0, 2), to: m.moveUci.slice(2, 4), promotion: m.moveUci[4] ?? undefined });
+      c.move({ from: m.uci.slice(0, 2), to: m.uci.slice(2, 4), promotion: m.uci[4] ?? undefined });
     }
     return c;
   }, [cursor, moves]);
@@ -95,7 +95,7 @@ export default function GameReplayPage() {
     setCursor(Math.max(-1, Math.min(idx, moves.length - 1)));
   };
 
-  const sanHistory = moves.slice(0, Math.max(0, cursor + 1)).map((m) => m.moveSan);
+  const sanHistory = moves.slice(0, Math.max(0, cursor + 1)).map((m) => m.san);
 
   if (loading) {
     return (
@@ -132,8 +132,8 @@ export default function GameReplayPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <span className="text-2xl text-accent-emerald">♔</span>
-        <span className="text-lg font-bold text-text-primary">Game Replay</span>
+        <span className="text-2xl text-emerald-400">♔</span>
+        <span className="text-lg font-bold text-slate-100">Game Replay</span>
         <span className="ml-auto text-xs text-zinc-500 font-mono">{id}</span>
       </nav>
 
@@ -207,13 +207,13 @@ export default function GameReplayPage() {
                 <div>
                   <div className="text-zinc-400">White</div>
                   <div className="text-lg font-mono font-bold text-zinc-100">
-                    {formatMs(currentMove.timeLeftWhite)}
+                    {formatMs(currentMove.whiteTime)}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-zinc-400">Black</div>
                   <div className="text-lg font-mono font-bold text-zinc-100">
-                    {formatMs(currentMove.timeLeftBlack)}
+                    {formatMs(currentMove.blackTime)}
                   </div>
                 </div>
               </div>

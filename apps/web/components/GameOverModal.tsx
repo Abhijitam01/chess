@@ -47,7 +47,7 @@ export function GameOverModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-700 animate-scaleIn">
+      <div className="bg-[#1c2333] rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-[#2a3547] animate-scaleIn">
         {/* Emoji */}
         <div className="text-center mb-4">
           <div className="text-7xl mb-4 animate-bounce">
@@ -60,20 +60,20 @@ export function GameOverModal({
           <h2 className={`text-4xl font-bold ${color}`}>
             {title}
           </h2>
-          <p className="text-gray-400 text-lg">
+          <p className="text-slate-400 text-lg">
             {subtitle}
           </p>
         </div>
 
         {/* Stats */}
-        <div className="bg-gray-900 rounded-lg p-4 mb-6 space-y-2">
+        <div className="bg-[#131929] rounded-lg p-4 mb-6 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Result:</span>
+            <span className="text-slate-400">Result:</span>
             <span className="text-white font-semibold">{winner ? `${winner} wins` : 'Draw'}</span>
           </div>
           {myRatingChange != null && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Rating change:</span>
+              <span className="text-slate-400">Rating change:</span>
               <span className={`font-bold ${myRatingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {myRatingChange >= 0 ? '+' : ''}{myRatingChange}
               </span>
@@ -85,14 +85,14 @@ export function GameOverModal({
         <div className="space-y-3">
           <button
             onClick={onPlayAgain}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-colors"
           >
             Play Again
           </button>
           
           <button
-            onClick={() => window.location.href = '/'}
-            className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+            onClick={() => window.location.href = '/game'}
+            className="w-full py-3 bg-[#1c2333] hover:bg-[#222d42] border border-[#2a3547] text-white font-semibold rounded-lg transition-colors"
           >
             Back to Home
           </button>

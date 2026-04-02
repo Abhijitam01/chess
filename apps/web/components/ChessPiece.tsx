@@ -24,10 +24,10 @@ export function ChessPiece({ type, color, className = '', isSelected = false }: 
   const src = `/pieces/${colorName}-${pieceName}.svg`;
 
   return (
-    <div 
+    <div
       className={`
         relative w-full h-full flex items-center justify-center
-        piece-transition select-none pointer-events-none
+        piece-transition select-none
         ${isSelected ? 'scale-110' : 'group-hover:scale-105'}
         ${className}
       `}
@@ -37,7 +37,7 @@ export function ChessPiece({ type, color, className = '', isSelected = false }: 
         alt={`${colorName} ${pieceName}`}
         width={45}
         height={45}
-        className="w-[85%] h-[85%] object-contain drop-shadow-md"
+        className="w-[85%] h-[85%] object-contain drop-shadow-md pointer-events-none"
         priority
         draggable={false}
       />
