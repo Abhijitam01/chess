@@ -157,10 +157,9 @@ describe("Game.makeMove", () => {
   });
 
   it("rejects a move played out of turn", async () => {
-    const { game, p1, p2 } = await makeGame();
+    const { game, p2 } = await makeGame();
     const prevCount = p2.sent.length;
 
-    // White to move; p2 is black — move should be ignored
     await game.makeMove(p2 as never, { from: "e7", to: "e5" });
 
     expect(p2.sent.length).toBe(prevCount);
