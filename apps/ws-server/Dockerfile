@@ -6,7 +6,7 @@ COPY . .
 
 RUN npm install -g pnpm
 RUN pnpm install
-RUN pnpm run build
+RUN pnpm run build --filter=@chess/ws-server...
 
 WORKDIR /app/apps/ws-server
 

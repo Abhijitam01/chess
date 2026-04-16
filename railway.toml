@@ -3,6 +3,5 @@ dockerfilePath = "apps/ws-server/Dockerfile"
 
 [deploy]
 startCommand = "node dist/index.js"
-healthcheckPath = "/health"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
