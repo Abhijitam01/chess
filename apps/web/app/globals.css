@@ -13,6 +13,8 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
+/* ─── Game app theme ─────────────────────────────────────────────────────────── */
+
 :root {
   --bg-primary: #262421;
   --bg-secondary: #302e2b;
@@ -24,8 +26,7 @@
   --border-color: #3d3a37;
 }
 
-html,
-body {
+html, body {
   max-width: 100vw;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -34,40 +35,109 @@ body {
   font-family: var(--font-sans);
 }
 
-.text-gradient-gold {
-  background: linear-gradient(135deg, #fef3c7 0%, #c6a052 50%, #78350f 100%);
+/* ─── Landing page theme variables ──────────────────────────────────────────── */
+
+.lp-dark {
+  --lp-bg:        #0d0d0d;
+  --lp-bg2:       #141414;
+  --lp-card:      rgba(255, 255, 255, 0.03);
+  --lp-border:    rgba(255, 255, 255, 0.07);
+  --lp-text:      #f0f0f0;
+  --lp-muted:     #666666;
+  --lp-subtle:    #333333;
+  --lp-accent:    #769656;
+  --lp-accent2:   #8fb870;
+  --lp-green-glow: rgba(118, 150, 86, 0.15);
+}
+
+.lp-light {
+  --lp-bg:        #ffffff;
+  --lp-bg2:       #f7f7f5;
+  --lp-card:      rgba(0, 0, 0, 0.025);
+  --lp-border:    rgba(0, 0, 0, 0.08);
+  --lp-text:      #111111;
+  --lp-muted:     #888888;
+  --lp-subtle:    #e5e5e5;
+  --lp-accent:    #4d6b35;
+  --lp-accent2:   #5a7a40;
+  --lp-green-glow: rgba(77, 107, 53, 0.08);
+}
+
+/* ─── Landing page utilities ─────────────────────────────────────────────────── */
+
+.lp-bg         { background-color: var(--lp-bg); }
+.lp-bg2        { background-color: var(--lp-bg2); }
+.lp-card       { background: var(--lp-card); border: 1px solid var(--lp-border); }
+.lp-text       { color: var(--lp-text); }
+.lp-muted      { color: var(--lp-muted); }
+.lp-border-c   { border-color: var(--lp-border); }
+.lp-accent-c   { color: var(--lp-accent); }
+.lp-accent-bg  { background-color: var(--lp-accent); }
+
+.lp-pill {
+  background: var(--lp-card);
+  border: 1px solid var(--lp-border);
+  color: var(--lp-muted);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.lp-card-hover {
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.lp-card-hover:hover {
+  border-color: var(--lp-accent) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -8px var(--lp-green-glow);
+}
+
+.gradient-text-green {
+  background: linear-gradient(135deg, var(--lp-accent2) 0%, var(--lp-accent) 60%, #3d5829 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.glass-morphism {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.lp-btn-primary {
+  background: var(--lp-accent);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 15px;
+  transition: opacity 0.15s, transform 0.15s;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+.lp-btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.lp-btn-primary:active { transform: translateY(0); opacity: 1; }
 
-.bg-mesh-gradient {
-  background-color: var(--bg-panel);
-  background-image:
-    radial-gradient(at 0% 0%, rgba(118, 150, 86, 0.06) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(118, 150, 86, 0.04) 0px, transparent 50%);
+.lp-btn-secondary {
+  background: transparent;
+  color: var(--lp-text);
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 15px;
+  transition: background 0.15s, transform 0.15s;
+  border: 1px solid var(--lp-border);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+.lp-btn-secondary:hover { background: var(--lp-card); transform: translateY(-1px); }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
-}
-
-.animate-float {
-  animation: float 5s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%) skewX(-30deg); }
-  100% { transform: translateX(200%) skewX(-30deg); }
-}
+/* ─── Game-specific animations ──────────────────────────────────────────────── */
 
 @keyframes resultSlideIn {
   from { opacity: 0; transform: translateY(16px); }
@@ -95,7 +165,7 @@ body {
   100% { transform: translateY(-48px) scale(0.4); opacity: 0; }
 }
 
-.result-enter { animation: resultSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.result-enter    { animation: resultSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .result-icon-pop { animation: resultIconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both; }
 .win-shimmer-text {
   background: linear-gradient(90deg, #8fb870 0%, #d4edbe 35%, #fff 50%, #d4edbe 65%, #8fb870 100%);
@@ -106,38 +176,29 @@ body {
   background-clip: text;
 }
 .move-badge-pop { animation: moveBadgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s both; }
-.particle { animation: particleFloat 1.2s ease-out forwards; }
+.particle       { animation: particleFloat 1.2s ease-out forwards; }
 
-/* ─── Landing page extras ──────────────────────────────────────────────────── */
+/* ─── Shared extras ─────────────────────────────────────────────────────────── */
 
-.text-gradient-emerald {
-  background: linear-gradient(135deg, #a8d88a 0%, #769656 55%, #4d7035 100%);
+.text-gradient-gold {
+  background: linear-gradient(135deg, #fef3c7 0%, #c6a052 50%, #78350f 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.shadow-premium {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.5),
-    0 20px 50px -10px rgba(0, 0, 0, 0.8),
-    0 0 60px -20px rgba(118, 150, 86, 0.12);
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.shimmer-effect {
-  background: linear-gradient(
-    105deg,
-    transparent 40%,
-    rgba(255, 255, 255, 0.07) 50%,
-    transparent 60%
-  );
-  background-size: 200% 100%;
-  animation: shimmer-sweep 2.5s ease-in-out infinite;
-}
-
-@keyframes shimmer-sweep {
-  0%   { background-position: -100% center; }
-  100% { background-position: 300% center; }
+.bg-mesh-gradient {
+  background-color: var(--bg-panel);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(118, 150, 86, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(118, 150, 86, 0.04) 0px, transparent 50%);
 }
 
 @keyframes board-glow {
@@ -152,21 +213,27 @@ body {
 }
 .highlight-sq { animation: highlight-sq 1.2s ease-in-out infinite; }
 
-/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 6px;
+.shadow-premium {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.5),
+    0 20px 50px -10px rgba(0, 0, 0, 0.8),
+    0 0 60px -20px rgba(118, 150, 86, 0.12);
 }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-panel);
+.shimmer-effect {
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: shimmer-sweep 2.5s ease-in-out infinite;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 6px;
+@keyframes shimmer-sweep {
+  0%   { background-position: -100% center; }
+  100% { background-position: 300% center; }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-panel); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
