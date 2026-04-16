@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Zap, Trophy, Users, ArrowRight, Moon, Sun } from "lucide-react";
+import { ChevronRight, Zap, Trophy, Users, ArrowRight, Moon, Sun, Twitter } from "lucide-react";
 
 // ─── Chess board ──────────────────────────────────────────────────────────────
 
@@ -487,22 +487,102 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t py-10 px-6" style={{ borderColor: "var(--lp-border)" }}>
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-black tracking-tight">
-            <span style={{ color: "var(--lp-accent)" }}>♔</span> Chess.io
+      <footer className="border-t px-6 pt-14 pb-0 overflow-hidden" style={{ borderColor: "var(--lp-border)" }}>
+        <div className="max-w-6xl mx-auto">
+
+          {/* Top row — brand + link columns */}
+          <div className="flex flex-col md:flex-row gap-12 md:gap-20 pb-12">
+
+            {/* Brand */}
+            <div className="flex-1 max-w-xs">
+              <div className="flex items-center gap-2 font-black text-lg tracking-tight">
+                <span style={{ color: "var(--lp-accent)" }}>♔</span> Chess.io
+              </div>
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--lp-muted)" }}>
+                The chessboard built for serious play. Real Elo ratings, instant matchmaking, zero fluff.
+              </p>
+              <div className="mt-5 flex items-center gap-3">
+                <a
+                  href="https://twitter.com/abhijitam_tw"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                  style={{ background: "var(--lp-card)", border: "1px solid var(--lp-border)", color: "var(--lp-muted)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--lp-text)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--lp-muted)")}
+                  aria-label="Twitter"
+                >
+                  <Twitter size={14} />
+                </a>
+              </div>
+            </div>
+
+            {/* Link columns */}
+            <div className="flex gap-12 md:gap-16">
+              <div className="flex flex-col gap-3">
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--lp-muted)" }}>Product</span>
+                {([["Play", "/signup"], ["Rankings", "/leaderboard"], ["Sign In", "/login"]] as [string, string][]).map(([label, href]) => (
+                  <button key={label} className="text-sm text-left transition-colors" style={{ color: "var(--lp-muted)" }}
+                    onClick={() => router.push(href)}
+                    onMouseEnter={e => (e.currentTarget.style.color = "var(--lp-text)")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "var(--lp-muted)")}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-3">
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--lp-muted)" }}>Contact</span>
+                <a href="https://twitter.com/abhijitam_tw" target="_blank" rel="noopener noreferrer"
+                  className="text-sm transition-colors" style={{ color: "var(--lp-muted)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--lp-text)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--lp-muted)")}>
+                  @abhijitam_tw
+                </a>
+                <a href="mailto:work.abhijitam@gmail.com"
+                  className="text-sm transition-colors" style={{ color: "var(--lp-muted)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--lp-text)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--lp-muted)")}>
+                  work.abhijitam@gmail.com
+                </a>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-7 text-sm" style={{ color: "var(--lp-muted)" }}>
-            {([["Rankings", "/leaderboard"], ["Login", "/login"], ["Sign Up", "/signup"]] as [string, string][]).map(([label, href]) => (
-              <button key={label} onClick={() => router.push(href)}
+
+          {/* Divider */}
+          <div className="h-px" style={{ background: "var(--lp-border)" }} />
+
+          {/* Giant wordmark */}
+          <div className="py-4 overflow-hidden">
+            <span
+              className="block font-black tracking-tighter select-none leading-none"
+              style={{
+                fontSize: "clamp(60px, 14vw, 160px)",
+                color: "var(--lp-border)",
+                letterSpacing: "-0.04em",
+              }}
+            >
+              CHESS.IO
+            </span>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px" style={{ background: "var(--lp-border)" }} />
+
+          {/* Bottom bar */}
+          <div className="py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs" style={{ color: "var(--lp-muted)" }}>
+            <span>© 2026 Chess.io. All rights reserved.</span>
+            <span>
+              Built by{" "}
+              <a href="https://abhijitamdubey.site" target="_blank" rel="noopener noreferrer"
+                className="transition-colors"
                 style={{ color: "var(--lp-muted)" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "var(--lp-accent)")}
                 onMouseLeave={e => (e.currentTarget.style.color = "var(--lp-muted)")}>
-                {label}
-              </button>
-            ))}
+                Abhijitam
+              </a>
+            </span>
           </div>
-          <div className="text-xs" style={{ color: "var(--lp-subtle)" }}>© 2026 Chess.io</div>
+
         </div>
       </footer>
 
