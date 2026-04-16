@@ -33,42 +33,6 @@ export function GameResultPanel({
 
   return (
     <>
-      <style>{`
-        @keyframes resultSlideIn {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes resultIconPop {
-          0%   { transform: scale(0.5); opacity: 0; }
-          65%  { transform: scale(1.18); opacity: 1; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes shimmerWin {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes moveBadgePop {
-          from { opacity: 0; transform: scale(0.85) translateY(6px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        @keyframes particleFloat {
-          0%   { transform: translateY(0) scale(1); opacity: 0.9; }
-          100% { transform: translateY(-48px) scale(0.4); opacity: 0; }
-        }
-        .result-enter { animation: resultSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-        .result-icon-pop { animation: resultIconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both; }
-        .win-shimmer-text {
-          background: linear-gradient(90deg, #a5b4fc 0%, #e0e7ff 35%, #fff 50%, #e0e7ff 65%, #a5b4fc 100%);
-          background-size: 200% auto;
-          animation: shimmerWin 2.2s linear infinite;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .move-badge-pop { animation: moveBadgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s both; }
-        .particle { animation: particleFloat 1.2s ease-out forwards; }
-      `}</style>
-
       <div
         className={`flex flex-col h-full transition-opacity duration-300 ${entered ? 'opacity-100' : 'opacity-0'}`}
       >
@@ -79,11 +43,10 @@ export function GameResultPanel({
           <div className="result-icon-pop relative">
             {youWon && (
               <div className="relative">
-                {/* Floating particles */}
                 {[...Array(6)].map((_, i) => (
                   <span
                     key={i}
-                    className="particle absolute w-1 h-1 rounded-full bg-indigo-400"
+                    className="particle absolute w-1 h-1 rounded-full bg-[#769656]"
                     style={{
                       left: `${10 + i * 12}px`,
                       bottom: '100%',
@@ -93,12 +56,12 @@ export function GameResultPanel({
                   />
                 ))}
                 <svg viewBox="0 0 56 56" className="w-20 h-20" fill="none">
-                  <circle cx="28" cy="28" r="27" fill="#1e1b4b" />
-                  <circle cx="28" cy="28" r="27" stroke="#6366f1" strokeWidth="1.5" strokeOpacity="0.6" />
+                  <circle cx="28" cy="28" r="27" fill="#1a2216" />
+                  <circle cx="28" cy="28" r="27" stroke="#769656" strokeWidth="1.5" strokeOpacity="0.6" />
                   <polygon
                     points="28,10 32.5,21.5 45,21.5 35.5,29 39,40.5 28,33 17,40.5 20.5,29 11,21.5 23.5,21.5"
-                    fill="#6366f1"
-                    stroke="#a5b4fc"
+                    fill="#769656"
+                    stroke="#8fb870"
                     strokeWidth="0.8"
                   />
                 </svg>
@@ -143,7 +106,7 @@ export function GameResultPanel({
 
           {/* Final move badge */}
           {winningMove && (
-            <div className="move-badge-pop flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0d1117] border border-[#2a3547]">
+            <div className="move-badge-pop flex items-center gap-2 px-3 py-2 rounded-lg bg-[#262421] border border-[#3d3a37]">
               <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest">
                 Final move
               </span>
@@ -158,7 +121,7 @@ export function GameResultPanel({
             <div className="result-enter text-center" style={{ animationDelay: '0.3s' }}>
               <div
                 className={`text-2xl font-black ${
-                  myRatingChange >= 0 ? 'text-indigo-400' : 'text-red-400'
+                  myRatingChange >= 0 ? 'text-[#769656]' : 'text-red-400'
                 }`}
               >
                 {myRatingChange >= 0 ? '+' : ''}{myRatingChange}
@@ -172,18 +135,18 @@ export function GameResultPanel({
 
         {/* Actions */}
         <div
-          className="result-enter flex-shrink-0 border-t border-[#1a2235] p-4 space-y-2.5"
+          className="result-enter flex-shrink-0 border-t border-[#3d3a37] p-4 space-y-2.5"
           style={{ animationDelay: '0.2s' }}
         >
           <button
             onClick={onPlayAgain}
-            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-colors"
+            className="w-full py-3 rounded-xl bg-[#769656] hover:bg-[#8fb870] text-white text-sm font-bold transition-colors"
           >
             Play Again
           </button>
           <button
             onClick={() => router.push('/game')}
-            className="w-full py-2.5 rounded-xl bg-transparent border border-[#2a3547] hover:bg-white/5 text-slate-400 hover:text-slate-200 text-sm font-semibold transition-colors"
+            className="w-full py-2.5 rounded-xl bg-transparent border border-[#3d3a37] hover:bg-white/5 text-slate-400 hover:text-slate-200 text-sm font-semibold transition-colors"
           >
             Back to Home
           </button>

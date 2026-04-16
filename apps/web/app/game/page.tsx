@@ -16,7 +16,6 @@ import { Chess } from "@chess/chess-engine";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
 
-// ── Bot logic ──────────────────────────────────────────────────────────────
 type BotDifficulty = 'easy' | 'medium' | 'hard';
 
 const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
@@ -52,7 +51,6 @@ function getBotMove(chess: Chess, difficulty: BotDifficulty): { from: string; to
     return moves[Math.floor(Math.random() * moves.length)]!;
   }
 
-  // Hard: 1-ply lookahead with material evaluation
   const color = chess.turn();
   let bestScore = -Infinity;
   let bestMove = moves[0]!;
@@ -87,7 +85,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative ${on ? "bg-indigo-600" : "bg-[#0d1117] border border-[#2a3547]"}`}
+      className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative ${on ? "bg-[#769656]" : "bg-[#262421] border border-[#3d3a37]"}`}
     >
       <div
         className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : "translate-x-0.5"}`}
@@ -119,14 +117,14 @@ function TimeControlPicker({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-4 rounded-lg bg-[#0d1117] border border-[#1a2235] overflow-hidden">
+      <div className="grid grid-cols-4 rounded-lg bg-[#262421] border border-[#3d3a37] overflow-hidden">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => selectCategory(cat)}
             className={`py-2 text-[11px] font-semibold capitalize transition-all ${
               currentCategory === cat
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[#769656] text-white'
                 : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
             }`}
           >
@@ -142,8 +140,8 @@ function TimeControlPicker({
             onClick={() => onChange(key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               value === key
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/50'
-                : 'bg-[#1c2333] text-slate-400 border border-[#2a3547] hover:border-indigo-500/30 hover:text-slate-200'
+                ? 'bg-[#769656]/20 text-[#8fb870] border border-[#769656]/50'
+                : 'bg-[#302e2b] text-slate-400 border border-[#3d3a37] hover:border-[#769656]/30 hover:text-slate-200'
             }`}
           >
             {tc.minutes} min
@@ -220,7 +218,6 @@ export default function Game() {
   const [viewingMoveIndex, setViewingMoveIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'moves' | 'chat' | 'info'>('moves');
 
-  // Bot play state
   const [botMode, setBotMode] = useState(false);
   const [selectedBotDifficulty, setSelectedBotDifficulty] = useState<BotDifficulty>('medium');
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('medium');
@@ -281,7 +278,6 @@ export default function Game() {
     setViewingMoveIndex(null);
   };
 
-  // Bot auto-move effect
   useEffect(() => {
     if (!botMode || !botThinking || localStatus !== 'playing') return;
     const delay = botDifficulty === 'easy' ? 300 : botDifficulty === 'medium' ? 500 : 900;
@@ -309,7 +305,7 @@ export default function Game() {
 
   if (isLoading || !user) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0d1117] text-slate-400">
+      <div className="h-screen flex items-center justify-center bg-[#262421] text-slate-400">
         <div className="text-lg font-medium">Loading...</div>
       </div>
     );
@@ -321,7 +317,6 @@ export default function Game() {
   const isIdle = !botMode && matchMakingStatus === "idle" && status !== "playing" && !isFinished;
   const isFinding = !botMode && matchMakingStatus === "finding";
 
-  // Display variables — bot mode overrides multiplayer
   const displayChess = botMode ? localChess : chess;
   const displayPlayerColor = botMode ? 'white' : playerColor;
   const displayMoveHistory = botMode ? localMoves : moveHistory;
@@ -336,16 +331,14 @@ export default function Game() {
   const opponentColorLabel = displayPlayerColor === "white" ? "black" : "white";
 
   return (
-    <div className="h-screen flex flex-col bg-[#0d1117] text-slate-100 overflow-hidden">
-      {/* ── Top Navigation ── */}
-      <nav className="h-14 border-b border-[#1a2235] bg-[#111827] flex-shrink-0 z-20 px-4 flex items-center justify-between">
-        {/* Left */}
+    <div className="h-screen flex flex-col bg-[#262421] text-slate-100 overflow-hidden">
+      <nav className="h-14 border-b border-[#3d3a37] bg-[#1d1b18] flex-shrink-0 z-20 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/game")}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <span className="text-xl text-indigo-400">♔</span>
+            <span className="text-xl text-[#769656]">♔</span>
             <span className="text-base font-bold text-slate-100 hidden sm:block">Chess</span>
           </button>
 
@@ -362,14 +355,13 @@ export default function Game() {
           )}
         </div>
 
-        {/* Right */}
         <div className="flex items-center gap-2">
           <div
-            className={`w-2 h-2 rounded-full flex-shrink-0 ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`}
+            className={`w-2 h-2 rounded-full flex-shrink-0 ${isConnected ? "bg-[#769656] animate-pulse" : "bg-red-400"}`}
           />
 
           {isPlaying && lobbyCode && (
-            <span className="hidden sm:block px-3 py-1.5 rounded-lg bg-[#1c2333] border border-[#2a3547] text-xs font-mono text-slate-400">
+            <span className="hidden sm:block px-3 py-1.5 rounded-lg bg-[#302e2b] border border-[#3d3a37] text-xs font-mono text-slate-400">
               {lobbyCode}
             </span>
           )}
@@ -377,7 +369,7 @@ export default function Game() {
           {isPlaying && (
             <button
               onClick={() => resetGame()}
-              className="px-3 py-1.5 rounded-lg bg-[#1c2333] border border-[#2a3547] text-xs font-semibold text-slate-400 hover:text-slate-200 hover:border-[#3a4d6a] transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-[#302e2b] border border-[#3d3a37] text-xs font-semibold text-slate-400 hover:text-slate-200 hover:border-[#3a4d6a] transition-colors"
             >
               Lobby
             </button>
@@ -387,13 +379,13 @@ export default function Game() {
             <>
               <button
                 onClick={() => router.push(`/profile/${user.username}`)}
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1c2333] hover:bg-[#222d42] transition-colors"
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#302e2b] hover:bg-[#222d42] transition-colors"
               >
-                <span className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px] font-black">
+                <span className="w-5 h-5 rounded-full bg-[#769656] flex items-center justify-center text-white text-[9px] font-black">
                   {user.username[0]?.toUpperCase()}
                 </span>
                 <span className="text-xs font-semibold text-slate-300">{user.username}</span>
-                <span className="text-xs font-bold text-indigo-400">{user.rating}</span>
+                <span className="text-xs font-bold text-[#769656]">{user.rating}</span>
               </button>
               <button
                 onClick={() => {
@@ -410,7 +402,7 @@ export default function Game() {
           {isPlaying && (
             <button
               onClick={openLobbyModal}
-              className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors"
+              className="px-4 py-1.5 rounded-lg bg-[#769656] hover:bg-[#8fb870] text-white text-xs font-bold transition-colors"
             >
               New Game
             </button>
@@ -418,14 +410,12 @@ export default function Game() {
         </div>
       </nav>
 
-      {/* ── Main ── */}
       <main className="flex-1 flex overflow-hidden">
-        {/* Icon Sidebar */}
-        <aside className="hidden lg:flex w-14 flex-shrink-0 bg-[#111827] border-r border-[#1a2235] flex-col items-center py-3 gap-1">
+        <aside className="hidden lg:flex w-14 flex-shrink-0 bg-[#1d1b18] border-r border-[#3d3a37] flex-col items-center py-3 gap-1">
           <button
             onClick={() => router.push("/game")}
             title="Home"
-            className="p-3 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-[#1c2333] transition-colors"
+            className="p-3 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-[#302e2b] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -434,7 +424,7 @@ export default function Game() {
           <button
             onClick={() => router.push("/leaderboard")}
             title="Leaderboard"
-            className="p-3 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-[#1c2333] transition-colors"
+            className="p-3 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-[#302e2b] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -443,7 +433,7 @@ export default function Game() {
           <button
             onClick={() => router.push(`/profile/${user.username}`)}
             title="Profile"
-            className="p-3 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-[#1c2333] transition-colors"
+            className="p-3 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-[#302e2b] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -457,9 +447,8 @@ export default function Game() {
           </div>
         </aside>
 
-        {/* ── Left Panel (idle only) ── */}
         {!isPlaying && (
-        <div className="hidden lg:flex flex-col w-[240px] flex-shrink-0 bg-[#111827] border-r border-[#1a2235] overflow-y-auto">
+        <div className="hidden lg:flex flex-col w-[240px] flex-shrink-0 bg-[#1d1b18] border-r border-[#3d3a37] overflow-y-auto">
             <div className="p-4 space-y-4">
               <div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
@@ -471,7 +460,7 @@ export default function Game() {
               <button
                 onClick={() => startMatchMaking(selectedTimeControl)}
                 disabled={!isConnected || isFinding}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors shadow-lg shadow-indigo-600/20"
+                className="w-full py-3 rounded-xl bg-[#769656] hover:bg-[#8fb870] disabled:bg-[#2a3d1f] disabled:cursor-not-allowed text-white font-bold text-sm transition-colors shadow-lg shadow-[#769656]/20"
               >
                 {isFinding ? (
                   <span className="flex items-center justify-center gap-1.5">
@@ -488,30 +477,30 @@ export default function Game() {
               {isFinding && (
                 <button
                   onClick={resetGame}
-                  className="w-full py-2.5 rounded-xl border border-[#2a3547] text-slate-400 hover:text-slate-200 hover:border-slate-600 text-sm font-semibold transition-colors"
+                  className="w-full py-2.5 rounded-xl border border-[#3d3a37] text-slate-400 hover:text-slate-200 hover:border-slate-600 text-sm font-semibold transition-colors"
                 >
                   Cancel
                 </button>
               )}
 
               <div className="relative flex items-center">
-                <div className="flex-1 border-t border-[#1a2235]" />
-                <span className="px-2 text-[10px] text-slate-600 bg-[#111827]">OR</span>
-                <div className="flex-1 border-t border-[#1a2235]" />
+                <div className="flex-1 border-t border-[#3d3a37]" />
+                <span className="px-2 text-[10px] text-slate-600 bg-[#1d1b18]">OR</span>
+                <div className="flex-1 border-t border-[#3d3a37]" />
               </div>
 
               <button
                 onClick={openLobbyModal}
                 disabled={!isConnected}
-                className="w-full py-3 rounded-xl border border-[#2a3547] text-slate-300 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-bold transition-all"
+                className="w-full py-3 rounded-xl border border-[#3d3a37] text-slate-300 hover:text-white hover:border-[#769656]/50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-bold transition-all"
               >
                 Challenge a Friend
               </button>
 
               <div className="relative flex items-center">
-                <div className="flex-1 border-t border-[#1a2235]" />
-                <span className="px-2 text-[10px] text-slate-600 bg-[#111827]">OR</span>
-                <div className="flex-1 border-t border-[#1a2235]" />
+                <div className="flex-1 border-t border-[#3d3a37]" />
+                <span className="px-2 text-[10px] text-slate-600 bg-[#1d1b18]">OR</span>
+                <div className="flex-1 border-t border-[#3d3a37]" />
               </div>
 
               <div>
@@ -525,8 +514,8 @@ export default function Game() {
                       onClick={() => setSelectedBotDifficulty(d)}
                       className={`py-2 rounded-xl text-xs font-bold capitalize transition-all ${
                         selectedBotDifficulty === d
-                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                          : 'bg-[#1c2333] border border-[#2a3547] text-slate-400 hover:border-indigo-500/30 hover:text-slate-200'
+                          ? 'bg-[#769656] text-white shadow-lg shadow-[#769656]/20'
+                          : 'bg-[#302e2b] border border-[#3d3a37] text-slate-400 hover:border-[#769656]/30 hover:text-slate-200'
                       }`}
                     >
                       {d}
@@ -550,8 +539,7 @@ export default function Game() {
         </div>
         )}
 
-        {/* ── Center: Board ── */}
-        <div className="flex-1 flex flex-col bg-[#0d1117] overflow-hidden">
+        <div className="flex-1 flex flex-col bg-[#262421] overflow-hidden">
           {showBoard ? (
             /* Playing / Finished: opponent strip + board + player strip */
             <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden p-2 lg:p-3">
@@ -559,7 +547,6 @@ export default function Game() {
                 height: 'min(calc(100vh - 56px - 32px), 90vh)',
                 width: 'min(min(calc(100vh - 56px - 32px), 90vh), 100%)'
               }}>
-                {/* Opponent strip */}
                 <div className="h-[52px] flex-shrink-0 flex items-center justify-between px-1 gap-3">
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${botMode ? 'bg-violet-700' : 'bg-violet-700'}`}>
@@ -573,8 +560,8 @@ export default function Game() {
                   {!botMode && (
                     <div className={`px-3 py-1.5 rounded-lg font-mono text-xl font-black tabular-nums transition-all ${
                       opponentClockActive
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-[#1c2333] text-slate-500 border border-[#2a3547]'
+                        ? 'bg-[#769656] text-white'
+                        : 'bg-[#302e2b] text-slate-500 border border-[#3d3a37]'
                     }`}>
                       {formatTime(opponentTime)}
                     </div>
@@ -588,7 +575,6 @@ export default function Game() {
                   )}
                 </div>
 
-                {/* Board — square, fills remaining height */}
                 <div className="flex-1 min-h-0 min-w-0">
                   <ChessBoard
                     chess={displayChess}
@@ -606,23 +592,22 @@ export default function Game() {
                   />
                 </div>
 
-                {/* Player strip */}
                 <div className="h-[52px] flex-shrink-0 flex items-center justify-between px-1 gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-xs flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#769656] flex items-center justify-center text-white font-black text-xs flex-shrink-0">
                       {user.username[0]?.toUpperCase()}
                     </div>
                     <div>
                       <div className="text-sm font-bold text-slate-100">{user.username}</div>
                       <div className="text-[10px] text-slate-500 capitalize">{displayPlayerColor ?? 'white'}</div>
                     </div>
-                    <span className="text-xs font-bold text-indigo-400">{user.rating}</span>
+                    <span className="text-xs font-bold text-[#769656]">{user.rating}</span>
                   </div>
                   {!botMode && (
                     <div className={`px-3 py-1.5 rounded-lg font-mono text-xl font-black tabular-nums transition-all ${
                       myClockActive
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                        : 'bg-[#1c2333] text-slate-500 border border-[#2a3547]'
+                        ? 'bg-[#769656] text-white shadow-lg shadow-[#769656]/30'
+                        : 'bg-[#302e2b] text-slate-500 border border-[#3d3a37]'
                     }`}>
                       {formatTime(myTime)}
                     </div>
@@ -648,24 +633,22 @@ export default function Game() {
             </div>
           )}
 
-          {/* Match starting banner */}
           {showMatchStartAnimation && (
-            <div className="px-5 py-2 rounded-xl bg-emerald-950/60 border border-emerald-700/30 shrink-0 mx-auto mb-2">
-              <span className="text-emerald-400 font-bold text-sm animate-pulse">
+            <div className="px-5 py-2 rounded-xl bg-[#1a2216]/60 border border-[#769656]/30 shrink-0 mx-auto mb-2">
+              <span className="text-[#769656] font-bold text-sm animate-pulse">
                 Match Starting — you play as {playerColor}
               </span>
             </div>
           )}
 
-          {/* Mobile controls */}
           <div className="lg:hidden mt-3 w-full max-w-md space-y-2 shrink-0">
             {isPlaying && (
               <div className="grid grid-cols-2 gap-2">
                 <div
                   className={`rounded-xl px-3 py-2.5 text-center transition-all ${
                     opponentClockActive
-                      ? "bg-indigo-600/20 border border-indigo-500/40"
-                      : "bg-[#1c2333] border border-[#2a3547]"
+                      ? "bg-[#769656]/20 border border-[#769656]/40"
+                      : "bg-[#302e2b] border border-[#3d3a37]"
                   }`}
                 >
                   <div className="text-[10px] text-slate-500 mb-1 uppercase tracking-wide">
@@ -673,7 +656,7 @@ export default function Game() {
                   </div>
                   <div
                     className={`font-mono text-2xl font-black tabular-nums ${
-                      opponentClockActive ? "text-indigo-300" : "text-slate-500"
+                      opponentClockActive ? "text-[#8fb870]" : "text-slate-500"
                     }`}
                   >
                     {formatTime(opponentTime)}
@@ -682,12 +665,12 @@ export default function Game() {
                 <div
                   className={`rounded-xl px-3 py-2.5 text-center transition-all ${
                     myClockActive
-                      ? "bg-indigo-600 shadow-lg shadow-indigo-600/30"
-                      : "bg-[#1c2333] border border-[#2a3547]"
+                      ? "bg-[#769656] shadow-lg shadow-[#769656]/30"
+                      : "bg-[#302e2b] border border-[#3d3a37]"
                   }`}
                 >
                   <div
-                    className={`text-[10px] mb-1 uppercase tracking-wide ${myClockActive ? "text-indigo-200" : "text-slate-500"}`}
+                    className={`text-[10px] mb-1 uppercase tracking-wide ${myClockActive ? "text-[#8fb870]" : "text-slate-500"}`}
                   >
                     You
                   </div>
@@ -708,7 +691,7 @@ export default function Game() {
                 {isFinding ? (
                   <button
                     onClick={resetGame}
-                    className="w-full py-3 rounded-xl border border-[#2a3547] text-slate-400 hover:text-slate-200 text-sm font-bold transition-colors"
+                    className="w-full py-3 rounded-xl border border-[#3d3a37] text-slate-400 hover:text-slate-200 text-sm font-bold transition-colors"
                   >
                     Cancel Search
                   </button>
@@ -717,14 +700,14 @@ export default function Game() {
                     <button
                       onClick={() => startMatchMaking(selectedTimeControl)}
                       disabled={!isConnected}
-                      className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-sm transition-colors"
+                      className="w-full py-3 rounded-xl bg-[#769656] hover:bg-[#8fb870] disabled:opacity-40 text-white font-bold text-sm transition-colors"
                     >
                       Find Opponent
                     </button>
                     <button
                       onClick={openLobbyModal}
                       disabled={!isConnected}
-                      className="w-full py-2.5 rounded-xl border border-[#2a3547] text-slate-300 hover:text-white disabled:opacity-40 text-sm font-semibold transition-colors"
+                      className="w-full py-2.5 rounded-xl border border-[#3d3a37] text-slate-300 hover:text-white disabled:opacity-40 text-sm font-semibold transition-colors"
                     >
                       Challenge a Friend
                     </button>
@@ -738,7 +721,7 @@ export default function Game() {
                 {!drawOfferPending && !drawOfferFromOpponent && (
                   <button
                     onClick={offerDraw}
-                    className="flex-1 py-2.5 rounded-xl bg-[#1c2333] border border-[#2a3547] text-slate-300 text-xs font-bold transition-colors hover:border-indigo-500/40"
+                    className="flex-1 py-2.5 rounded-xl bg-[#302e2b] border border-[#3d3a37] text-slate-300 text-xs font-bold transition-colors hover:border-[#769656]/40"
                   >
                     Offer Draw
                   </button>
@@ -754,8 +737,7 @@ export default function Game() {
           </div>
         </div>
 
-        {/* ── Right Panel ── */}
-        <div className="hidden lg:flex flex-col w-[280px] flex-shrink-0 bg-[#111827] border-l border-[#1a2235]">
+        <div className="hidden lg:flex flex-col w-[280px] flex-shrink-0 bg-[#1d1b18] border-l border-[#3d3a37]">
           {isFinished ? (
             <GameResultPanel
               winner={botMode ? localWinner : winner}
@@ -769,15 +751,14 @@ export default function Game() {
             />
           ) : isPlaying ? (
             <>
-              {/* Tabs */}
-              <div className="flex border-b border-[#1a2235] flex-shrink-0">
+              <div className="flex border-b border-[#3d3a37] flex-shrink-0">
                 {(['moves', 'chat', 'info'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`flex-1 py-3 text-xs font-semibold capitalize transition-colors ${
                       activeTab === tab
-                        ? 'text-slate-100 border-b-2 border-indigo-500'
+                        ? 'text-slate-100 border-b-2 border-[#769656]'
                         : 'text-slate-500 hover:text-slate-300'
                     }`}
                   >
@@ -786,22 +767,21 @@ export default function Game() {
                 ))}
               </div>
 
-              {/* Draw offer banner */}
               {drawOfferFromOpponent && (
-                <div className="p-3 bg-indigo-950/60 border-b border-indigo-700/40 flex-shrink-0">
-                  <p className="text-xs font-semibold text-indigo-300 text-center mb-2">
+                <div className="p-3 bg-[#1a2216]/60 border-b border-[#769656]/40 flex-shrink-0">
+                  <p className="text-xs font-semibold text-[#8fb870] text-center mb-2">
                     Opponent offers a draw
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={acceptDraw}
-                      className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors"
+                      className="flex-1 py-1.5 bg-[#769656] hover:bg-[#8fb870] text-white text-xs font-bold rounded-lg transition-colors"
                     >
                       Accept
                     </button>
                     <button
                       onClick={declineDraw}
-                      className="flex-1 py-1.5 bg-[#1c2333] border border-[#2a3547] text-slate-400 hover:text-slate-200 text-xs font-bold rounded-lg transition-colors"
+                      className="flex-1 py-1.5 bg-[#302e2b] border border-[#3d3a37] text-slate-400 hover:text-slate-200 text-xs font-bold rounded-lg transition-colors"
                     >
                       Decline
                     </button>
@@ -809,7 +789,6 @@ export default function Game() {
                 </div>
               )}
 
-              {/* Tab content */}
               <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {activeTab === 'moves' && (
                   <MoveHistory
@@ -835,14 +814,13 @@ export default function Game() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Your rating</span>
-                      <span className="text-indigo-400 font-bold">{user.rating}</span>
+                      <span className="text-[#769656] font-bold">{user.rating}</span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Nav controls */}
-              <div className="flex-shrink-0 border-t border-[#1a2235] flex items-center justify-center gap-1 p-3">
+              <div className="flex-shrink-0 border-t border-[#3d3a37] flex items-center justify-center gap-1 p-3">
                 <button
                   onClick={() => setViewingMoveIndex(0)}
                   disabled={(viewingMoveIndex ?? displayMoveHistory.length - 1) <= 0}
@@ -863,7 +841,7 @@ export default function Game() {
                 >
                   ‹
                 </button>
-                <span className="px-3 py-1 rounded bg-[#1c2333] text-xs font-mono text-slate-400 min-w-[60px] text-center">
+                <span className="px-3 py-1 rounded bg-[#302e2b] text-xs font-mono text-slate-400 min-w-[60px] text-center">
                   {viewingMoveIndex === null
                     ? `${Math.ceil(displayMoveHistory.length / 2)} / ${Math.ceil(displayMoveHistory.length / 2)}`
                     : `${Math.ceil((viewingMoveIndex + 1) / 2)} / ${Math.ceil(displayMoveHistory.length / 2)}`}
@@ -890,8 +868,7 @@ export default function Game() {
                 </button>
               </div>
 
-              {/* Draw / Resign */}
-              <div className="flex-shrink-0 border-t border-[#1a2235] flex items-center gap-2 p-3">
+              <div className="flex-shrink-0 border-t border-[#3d3a37] flex items-center gap-2 p-3">
                 {botMode ? (
                   <button
                     onClick={resetBotGame}
@@ -904,13 +881,13 @@ export default function Game() {
                     {!drawOfferPending && !drawOfferFromOpponent && (
                       <button
                         onClick={offerDraw}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#1c2333] border border-[#2a3547] hover:border-indigo-500/40 text-slate-300 text-xs font-bold transition-all"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#302e2b] border border-[#3d3a37] hover:border-[#769656]/40 text-slate-300 text-xs font-bold transition-all"
                       >
                         ½ Draw
                       </button>
                     )}
                     {drawOfferPending && (
-                      <div className="flex-1 py-2.5 text-center text-xs text-indigo-400 font-medium">
+                      <div className="flex-1 py-2.5 text-center text-xs text-[#769656] font-medium">
                         Draw offered…
                       </div>
                     )}
@@ -927,16 +904,15 @@ export default function Game() {
           ) : (
             /* Idle right panel */
             <div className="p-4 space-y-4 overflow-y-auto flex-1">
-              {/* User card */}
-              <div className="rounded-xl bg-[#1c2333] border border-[#2a3547] p-4 space-y-3">
+              <div className="rounded-xl bg-[#302e2b] border border-[#3d3a37] p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
+                    <div className="w-10 h-10 rounded-full bg-[#769656] flex items-center justify-center text-white font-black text-sm">
                       {user.username[0]?.toUpperCase()}
                     </div>
                     <div
-                      className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1c2333] ${
-                        isConnected ? "bg-emerald-400" : "bg-red-400"
+                      className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#302e2b] ${
+                        isConnected ? "bg-[#769656]" : "bg-red-400"
                       }`}
                     />
                   </div>
@@ -944,21 +920,20 @@ export default function Game() {
                     <div className="text-sm font-bold text-slate-100 truncate">{user.username}</div>
                     <button
                       onClick={() => router.push(`/profile/${user.username}`)}
-                      className="text-xs text-slate-500 hover:text-indigo-400 transition-colors"
+                      className="text-xs text-slate-500 hover:text-[#769656] transition-colors"
                     >
                       View Profile →
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#131929] border border-[#1a2235]">
+                <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#1d1b18] border border-[#3d3a37]">
                   <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
                     ELO Rating
                   </span>
-                  <span className="text-xl font-black text-indigo-400">{user.rating}</span>
+                  <span className="text-xl font-black text-[#769656]">{user.rating}</span>
                 </div>
               </div>
 
-              {/* Board Themes */}
               <div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                   Board Theme
@@ -971,8 +946,8 @@ export default function Game() {
                       onClick={() => setBoardTheme(theme)}
                       className={`relative rounded-lg overflow-hidden border-2 transition-all h-10 ${
                         boardTheme === theme
-                          ? "border-indigo-500 scale-105"
-                          : "border-[#2a3547] hover:border-slate-500"
+                          ? "border-[#769656] scale-105"
+                          : "border-[#3d3a37] hover:border-slate-500"
                       }`}
                     >
                       <div className="grid grid-cols-2 grid-rows-2 h-full">
@@ -986,18 +961,17 @@ export default function Game() {
                 </div>
               </div>
 
-              {/* Preferences */}
               <div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                   Preferences
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#1c2333] border border-[#2a3547]">
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#302e2b] border border-[#3d3a37]">
                     <span className="text-base">{soundEnabled ? "🔊" : "🔇"}</span>
                     <span className="text-sm text-slate-300 flex-1">Sound Effects</span>
                     <Toggle on={soundEnabled} onClick={() => setSoundEnabled(!soundEnabled)} />
                   </div>
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#1c2333] border border-[#2a3547]">
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#302e2b] border border-[#3d3a37]">
                     <span className="text-sm font-mono font-bold text-slate-400">a1</span>
                     <span className="text-sm text-slate-300 flex-1">Coordinates</span>
                     <Toggle

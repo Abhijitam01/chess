@@ -1,26 +1,148 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
-import {
-  Zap,
-  Cpu,
-  Search,
-  ChevronRight,
-  Star,
-  Users,
-  Shield,
-  Globe
-} from "lucide-react";
+import { Zap, Search, ChevronRight, Users, Shield, Globe } from "lucide-react";
 
-// --- Components ---
+// ─── Chess board types & data ────────────────────────────────────────────────
+
+type PieceCode = "wp"|"wn"|"wb"|"wr"|"wq"|"wk"|"bp"|"bn"|"bb"|"br"|"bq"|"bk";
+type Board = (PieceCode | null)[][];
+type Move = [number, number, number, number];
+
+const PIECE_URLS: Record<PieceCode, string> = {
+  wp: "/pieces/white-pawn.svg",
+  wn: "/pieces/white-knight.svg",
+  wb: "/pieces/white-bishop.svg",
+  wr: "/pieces/white-rook.svg",
+  wq: "/pieces/white-queen.svg",
+  wk: "/pieces/white-king.svg",
+  bp: "/pieces/black-pawn.svg",
+  bn: "/pieces/black-knight.svg",
+  bb: "/pieces/black-bishop.svg",
+  br: "/pieces/black-rook.svg",
+  bq: "/pieces/black-queen.svg",
+  bk: "/pieces/black-king.svg",
+};
+
+const INITIAL_BOARD: Board = [
+  ["br","bn","bb","bq","bk","bb","bn","br"],
+  ["bp","bp","bp","bp","bp","bp","bp","bp"],
+  [null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null],
+  ["wp","wp","wp","wp","wp","wp","wp","wp"],
+  ["wr","wn","wb","wq","wk","wb","wn","wr"],
+];
+
+// Italian Game opening sequence: e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6
+const OPENING_MOVES: Move[] = [
+  [6,4,4,4], // 1. e4
+  [1,4,3,4], // 1...e5
+  [7,6,5,5], // 2. Nf3
+  [0,1,2,2], // 2...Nc6
+  [7,5,4,2], // 3. Bc4
+  [0,5,3,2], // 3...Bc5
+  [6,2,5,2], // 4. c3
+  [0,6,2,5], // 4...Nf6
+];
+
+function applyMove(board: Board, [fr, fc, tr, tc]: Move): Board {
+  return board.map((row, r) =>
+    row.map((cell, c) => {
+      if (r === tr && c === tc) return (board[fr]?.[fc]) ?? null;
+      if (r === fr && c === fc) return null;
+      return cell;
+    })
+  ) as Board;
+}
+
+const BOARD_STATES: Board[] = OPENING_MOVES.reduce<Board[]>(
+  (acc, move) => {
+    const last = acc[acc.length - 1];
+    return last ? [...acc, applyMove(last, move)] : acc;
+  },
+  [INITIAL_BOARD]
+);
+
+// ─── AnimatedChessBoard ───────────────────────────────────────────────────────
+
+const AnimatedChessBoard = () => {
+  const [stateIdx, setStateIdx] = useState(0);
+  const [lastMove, setLastMove] = useState<Move | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStateIdx(prev => {
+        const next = (prev + 1) % BOARD_STATES.length;
+        setLastMove(next > 0 ? (OPENING_MOVES[next - 1] ?? null) : null);
+        return next;
+      });
+    }, 1800);
+    return () => clearInterval(id);
+  }, []);
+
+  const board = BOARD_STATES[stateIdx] ?? INITIAL_BOARD;
+
+  const isLastMoveSquare = (r: number, c: number) =>
+    lastMove !== null && (
+      (r === lastMove[0] && c === lastMove[1]) ||
+      (r === lastMove[2] && c === lastMove[3])
+    );
+
+  return (
+    <div className="board-glow rounded-2xl overflow-hidden shadow-2xl w-full aspect-square">
+      <div className="grid grid-cols-8 h-full w-full" style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gridTemplateRows: "repeat(8, 1fr)" }}>
+        {board.map((row, r) =>
+          row.map((piece, c) => {
+            const light = (r + c) % 2 === 0;
+            const highlighted = isLastMoveSquare(r, c);
+            const bg = highlighted
+              ? (light ? "rgba(247,236,94,0.75)" : "rgba(247,236,94,0.55)")
+              : (light ? "#eeeed2" : "#769656");
+            return (
+              <div
+                key={`${r}-${c}`}
+                className="relative"
+                style={{ backgroundColor: bg }}
+              >
+                <AnimatePresence>
+                  {piece && (
+                    <motion.div
+                      key={`${piece}-${r}-${c}`}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.4 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      className="absolute inset-0 flex items-center justify-center p-[8%]"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={PIECE_URLS[piece]}
+                        alt={piece}
+                        className="w-full h-full object-contain select-none"
+                        draggable={false}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 const LoadingScreen = ({ onFinished }: { onFinished: () => void }) => {
   useEffect(() => {
-    const timer = setTimeout(() => onFinished(), 2500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => onFinished(), 2500);
+    return () => clearTimeout(t);
   }, [onFinished]);
 
   return (
@@ -28,10 +150,9 @@ const LoadingScreen = ({ onFinished }: { onFinished: () => void }) => {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
       transition={{ duration: 1, ease: "easeInOut" }}
-      className="fixed inset-0 z-100 bg-background flex flex-col items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-[100] bg-[#262421] flex flex-col items-center justify-center overflow-hidden"
     >
       <div className="absolute inset-0 bg-mesh-gradient opacity-30" />
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -39,16 +160,12 @@ const LoadingScreen = ({ onFinished }: { onFinished: () => void }) => {
         className="relative z-10 flex flex-col items-center gap-8"
       >
         <motion.div
-          animate={{
-            rotateY: [0, 180, 360],
-            scale: [1, 1.1, 1]
-          }}
+          animate={{ rotateY: [0, 180, 360], scale: [1, 1.1, 1] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           className="w-24 h-24 glass-morphism rounded-[32px] flex items-center justify-center text-5xl text-emerald-500 shadow-premium"
         >
           ♔
         </motion.div>
-
         <div className="flex flex-col items-center gap-2">
           <motion.h2
             initial={{ opacity: 0 }}
@@ -67,26 +184,20 @@ const LoadingScreen = ({ onFinished }: { onFinished: () => void }) => {
             Game of Kings
           </motion.h2>
         </div>
-
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: "200px" }}
           transition={{ delay: 1, duration: 1.5, ease: "easeInOut" }}
-          className="h-1 bg-linear-to-r from-transparent via-emerald-500 to-transparent rounded-full opacity-50"
+          className="h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent rounded-full opacity-50"
         />
       </motion.div>
-
-      {/* Decorative glows */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-emerald-500/5 blur-[150px] rounded-full pointer-events-none" />
     </motion.div>
   );
 };
 
 const GlassButton = ({
-  children,
-  primary = false,
-  onClick,
-  className = ""
+  children, primary = false, onClick, className = ""
 }: {
   children: React.ReactNode;
   primary?: boolean;
@@ -100,24 +211,19 @@ const GlassButton = ({
     className={`
       px-8 py-4 rounded-xl font-bold transition-all relative overflow-hidden group
       ${primary
-        ? "bg-linear-to-r from-accent-emerald to-emerald-600 text-white shadow-premium"
+        ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-premium"
         : "glass-morphism text-white hover:bg-white/10"}
       ${className}
     `}
   >
-    <div className="flex items-center gap-2 relative z-10 transition-transform group-hover:scale-105">
-      {children}
-    </div>
+    <div className="flex items-center gap-2 relative z-10">{children}</div>
     <div className={`absolute inset-0 transition-opacity duration-500 ${primary ? "bg-emerald-400/20 opacity-0 group-hover:opacity-100" : "bg-white/5 opacity-0 group-hover:opacity-100"}`} />
     <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 transition-opacity" />
   </motion.button>
 );
 
 const FeatureCard = ({
-  icon: Icon,
-  title,
-  description,
-  delay = 0
+  icon: Icon, title, description, delay = 0
 }: {
   icon: React.ElementType;
   title: string;
@@ -129,53 +235,39 @@ const FeatureCard = ({
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ duration: 0.8, delay, ease: "easeOut" }}
-    whileHover={{ y: -10, scale: 1.02 }}
-    className="glass-morphism p-8 rounded-[32px] hover:border-emerald-500/30 transition-all group relative overflow-hidden"
+    whileHover={{ y: -8, scale: 1.02 }}
+    className="glass-morphism p-8 rounded-[32px] hover:border-emerald-500/30 transition-all group relative overflow-hidden h-full"
   >
     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-colors" />
-    <div className="w-16 h-16 glass-morphism rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 shadow-premium">
-      <Icon className="text-emerald-500 w-8 h-8" />
+    <div className="w-14 h-14 glass-morphism rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+      <Icon className="text-emerald-500 w-7 h-7" />
     </div>
-    <h3 className="text-2xl font-black mb-4 text-white tracking-tight">{title}</h3>
-    <p className="text-zinc-400 leading-relaxed font-medium">{description}</p>
+    <h3 className="text-xl font-black mb-3 text-white tracking-tight">{title}</h3>
+    <p className="text-zinc-400 leading-relaxed text-sm">{description}</p>
   </motion.div>
 );
 
-const StatCounter = ({ label, value }: { label: string; value: string }) => (
-  <div className="text-center md:text-left">
-    <motion.div
-      initial={{ opacity: 0, scale: 0.5 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true }}
-      className="text-5xl font-black text-white mb-2 tracking-tighter"
-    >
-      {value}
-    </motion.div>
-    <div className="text-emerald-500/80 text-xs uppercase tracking-[0.2em] font-black">{label}</div>
-  </div>
-);
-
-// --- Page ---
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { scrollY } = useScroll();
-  const heroOpacity = useTransform(scrollY, [0, 600], [1, 0]);
-  const heroScale = useTransform(scrollY, [0, 600], [1, 0.95]);
-  const heroY = useTransform(scrollY, [0, 600], [0, 100]);
+  const heroOpacity = useTransform(scrollY, [0, 500], [1, 0]);
+  const heroScale  = useTransform(scrollY, [0, 500], [1, 0.96]);
+  const heroY      = useTransform(scrollY, [0, 500], [0, 80]);
 
   useEffect(() => {
-    const token = localStorage.getItem("chess_token");
-    setIsLoggedIn(!!token);
-  }, []);
+    if (localStorage.getItem("chess_token")) {
+      router.replace("/game");
+    }
+  }, [router]);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
@@ -184,324 +276,341 @@ export default function HomePage() {
         {isLoading ? (
           <LoadingScreen key="loader" onFinished={() => setIsLoading(false)} />
         ) : (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Header */}
+          <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+
+            {/* ── Nav ── */}
             <motion.nav
-              initial={{ y: -100, opacity: 0 }}
+              initial={{ y: -80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-              className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
-                isScrolled ? "py-4 bg-black/80 backdrop-blur-2xl border-b border-white/5" : "py-8 bg-transparent"
+              transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+              className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+                isScrolled ? "py-3 bg-black/80 backdrop-blur-2xl border-b border-white/5" : "py-6 bg-transparent"
               }`}
             >
               <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-                <div className="flex items-center gap-3 group cursor-pointer" onClick={() => router.push("/")}>
-                  <div className="w-12 h-12 glass-morphism rounded-2xl flex items-center justify-center font-black text-emerald-500 text-2xl group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-premium">
+                <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push("/")}>
+                  <div className="w-10 h-10 glass-morphism rounded-xl flex items-center justify-center font-black text-emerald-500 text-xl group-hover:rotate-12 group-hover:scale-110 transition-all duration-300">
                     ♔
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-2xl font-black tracking-tighter leading-none">CHESS.IO</span>
-                    <span className="text-[10px] text-emerald-500 font-bold tracking-[0.3em] uppercase opacity-60">Mastery</span>
-                  </div>
+                  <span className="text-xl font-black tracking-tighter uppercase">Chess.io</span>
                 </div>
 
-                <div className="hidden lg:flex items-center gap-12 text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
+                <div className="hidden md:flex items-center gap-10 text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
                   <button
                     onClick={() => router.push("/leaderboard")}
-                    className="hover:text-white transition-all relative group py-2"
+                    className="hover:text-white transition-colors relative group py-1"
                   >
                     Rankings
                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full" />
                   </button>
                 </div>
 
-                <div className="flex items-center gap-6">
-                  {isLoggedIn ? (
-                    <GlassButton primary className="py-3 px-8 text-sm" onClick={() => router.push("/game")}>
-                      Dashboard
-                    </GlassButton>
-                  ) : (
-                    <>
-                      <button
-                        className="hidden sm:block text-xs font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white transition-colors"
-                        onClick={() => router.push("/login")}
-                      >
-                        Login
-                      </button>
-                      <GlassButton primary className="py-3 px-8 text-sm" onClick={() => router.push("/signup")}>
-                        Play Now
-                      </GlassButton>
-                    </>
-                  )}
+                <div className="flex items-center gap-4">
+                  <button
+                    className="hidden sm:block text-xs font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white transition-colors"
+                    onClick={() => router.push("/login")}
+                  >
+                    Login
+                  </button>
+                  <GlassButton primary className="py-2.5 px-6 text-sm" onClick={() => router.push("/signup")}>
+                    Play Free
+                  </GlassButton>
                 </div>
               </div>
             </motion.nav>
 
-            {/* Hero Section */}
-            <section className="relative min-h-[110vh] flex items-center pt-24 px-6 overflow-hidden">
-              {/* Background Elements */}
+            {/* ── Hero ── */}
+            <section className="relative min-h-screen flex items-center pt-20 px-6 overflow-hidden">
               <div className="absolute inset-0 pointer-events-none">
                 <motion.div
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-                  transition={{ duration: 8, repeat: Infinity }}
-                  className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-emerald-500/10 blur-[150px] rounded-full"
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.08, 0.16, 0.08] }}
+                  transition={{ duration: 9, repeat: Infinity }}
+                  className="absolute -top-40 -left-20 w-[65%] h-[65%] bg-emerald-500/10 blur-[160px] rounded-full"
                 />
                 <motion.div
-                  animate={{ scale: [1.2, 1, 1.2], opacity: [0.05, 0.1, 0.05] }}
-                  transition={{ duration: 10, repeat: Infinity }}
-                  className="absolute bottom-[0%] right-[-10%] w-[50%] h-[70%] bg-accent-gold/5 blur-[120px] rounded-full"
+                  animate={{ scale: [1.1, 1, 1.1], opacity: [0.04, 0.08, 0.04] }}
+                  transition={{ duration: 11, repeat: Infinity }}
+                  className="absolute bottom-0 -right-20 w-[50%] h-[60%] bg-emerald-700/10 blur-[140px] rounded-full"
                 />
               </div>
 
               <motion.div
                 style={{ opacity: heroOpacity, scale: heroScale, y: heroY }}
-                className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center relative z-10"
+                className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 xl:gap-20 items-center relative z-10 py-16"
               >
-                <div className="space-y-12 text-center lg:text-left">
-                  <div className="space-y-6">
+                {/* Copy */}
+                <div className="space-y-10 text-center lg:text-left">
+                  <div className="space-y-5">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: 0.3 }}
+                      className="inline-flex items-center gap-2 px-4 py-2 glass-morphism rounded-full text-xs font-black uppercase tracking-[0.2em] text-emerald-400"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Live games happening now
+                    </motion.div>
+
                     <motion.h1
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.8, delay: 0.4 }}
-                      className="text-7xl md:text-9xl font-black tracking-tighter leading-[0.85] text-white"
+                      className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.88] text-white"
                     >
-                      Master Chess<br />
-                      <span className="text-gradient-gold">Online.</span>
+                      Play chess that<br />
+                      <span className="text-gradient-gold">means something.</span>
                     </motion.h1>
 
                     <motion.p
-                      initial={{ opacity: 0, y: 30 }}
+                      initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.8, delay: 0.6 }}
-                      className="text-xl md:text-2xl text-zinc-400 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium"
+                      className="text-lg text-zinc-400 max-w-lg mx-auto lg:mx-0 leading-relaxed"
                     >
-                      Focus on what matters: <span className="text-white">your next brilliant move.</span> <br className="hidden md:block" />
-                      Pure chess, zero clutter. Built for those who take the game seriously.
+                      Real Elo ratings. Instant matchmaking. Blitz, rapid, classical — all in one place.{" "}
+                      <span className="text-zinc-200">Zero distractions.</span>
                     </motion.p>
                   </div>
 
                   <motion.div
-                    initial={{ opacity: 0, y: 30 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.8 }}
-                    className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start"
+                    transition={{ duration: 0.7, delay: 0.8 }}
+                    className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
                   >
-                    {isLoggedIn ? (
-                      <GlassButton primary className="px-10 py-5" onClick={() => router.push("/game")}>
-                        Go to Dashboard <ChevronRight className="w-5 h-5 ml-2" />
-                      </GlassButton>
-                    ) : (
-                      <>
-                        <GlassButton primary className="px-10 py-5" onClick={() => router.push("/game")}>
-                          Start Playing Free <ChevronRight className="w-5 h-5 ml-2" />
-                        </GlassButton>
-                        <GlassButton className="px-10 py-5" onClick={() => router.push("/signup")}>
-                          Create Account
-                        </GlassButton>
-                      </>
-                    )}
+                    <GlassButton primary className="px-8 py-4 text-base" onClick={() => router.push("/signup")}>
+                      Start Playing Free <ChevronRight className="w-4 h-4" />
+                    </GlassButton>
+                    <GlassButton className="px-8 py-4 text-base" onClick={() => router.push("/login")}>
+                      Sign In
+                    </GlassButton>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1, duration: 0.8 }}
+                    className="flex flex-wrap gap-8 justify-center lg:justify-start"
+                  >
+                    {[
+                      { value: "Elo", label: "Standard ratings" },
+                      { value: "4", label: "Time controls" },
+                      { value: "Free", label: "Always" },
+                    ].map((s) => (
+                      <div key={s.label} className="text-center lg:text-left">
+                        <div className="text-2xl font-black text-white">{s.value}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">{s.label}</div>
+                      </div>
+                    ))}
                   </motion.div>
                 </div>
 
+                {/* Animated board */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9, rotateY: 20 }}
+                  initial={{ opacity: 0, scale: 0.85, rotateY: 15 }}
                   animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                  transition={{ duration: 1.2, delay: 0.6, ease: "easeOut" }}
-                  className="relative h-full perspective-1000"
+                  transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
+                  className="relative flex items-center justify-center"
                 >
-                  <div className="relative glass-morphism rounded-[60px] p-6 shadow-premium group">
-                     <div className="aspect-square bg-zinc-950 rounded-[40px] overflow-hidden border-2 border-white/5 relative">
-                        {/* Interactive Chessboard Decoration */}
-                        <div className="absolute inset-0 grid grid-cols-8 grid-rows-8 opacity-40">
-                          {Array.from({ length: 64 }).map((_, i) => (
-                            <motion.div
-                              key={i}
-                              whileHover={{ backgroundColor: "rgba(16, 185, 129, 0.2)" }}
-                              className={`${(Math.floor(i / 8) + i) % 2 === 0 ? 'bg-zinc-900' : 'bg-transparent'} transition-colors duration-300`}
-                            />
-                          ))}
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <motion.div
-                            animate={{
-                              y: [0, -40, 0],
-                              rotate: [0, 5, -5, 0],
-                              filter: ["drop-shadow(0 20px 30px rgba(0,0,0,0.5))", "drop-shadow(0 40px 60px rgba(16,185,129,0.3))", "drop-shadow(0 20px 30px rgba(0,0,0,0.5))"]
-                            }}
-                            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                            className="text-[280px] select-none opacity-90 cursor-default"
-                          >
-                            <span className="text-gradient-gold">♛</span>
-                          </motion.div>
-                        </div>
+                  <div className="relative w-full max-w-sm mx-auto lg:max-w-none">
+                    {/* Glow rings */}
+                    <div className="absolute -inset-4 border border-emerald-500/10 rounded-3xl pointer-events-none" />
+                    <div className="absolute -inset-8 border border-emerald-500/5 rounded-[2rem] pointer-events-none" />
 
-                        {/* Floating Pieces Decoration */}
-                        {[
-                          { char: "♞", pos: "top-10 left-10", delay: 0 },
-                          { char: "♝", pos: "bottom-20 right-10", delay: 1 },
-                          { char: "♜", pos: "top-20 right-20", delay: 2 },
-                        ].map((p, i) => (
-                          <motion.div
-                            key={i}
-                            animate={{ y: [0, -20, 0], opacity: [0.3, 0.6, 0.3] }}
-                            transition={{ duration: 4, delay: p.delay, repeat: Infinity }}
-                            className={`absolute ${p.pos} text-5xl text-white/20`}
-                          >
-                            {p.char}
-                          </motion.div>
-                        ))}
-                     </div>
+                    {/* Board container with coordinate labels */}
+                    <div className="glass-morphism p-3 rounded-2xl shadow-premium">
+                      <AnimatedChessBoard />
+                    </div>
 
-                     {/* Decorative Ring */}
-                     <div className="absolute -inset-4 border border-emerald-500/10 rounded-[70px] -z-10 animate-pulse" />
+                    {/* Move indicator */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.5 }}
+                      className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs text-zinc-500 font-mono whitespace-nowrap"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Italian Game · live preview
+                    </motion.div>
                   </div>
                 </motion.div>
               </motion.div>
 
-              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 opacity-40">
-                <div className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500">Scroll to Explore</div>
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-30">
+                <div className="text-[9px] font-black uppercase tracking-[0.5em] text-emerald-500">Scroll</div>
                 <motion.div
-                  animate={{ y: [0, 15, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="w-1.5 h-3 rounded-full bg-emerald-500"
+                  animate={{ y: [0, 12, 0] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                  className="w-1 h-3 rounded-full bg-emerald-500"
                 />
               </div>
             </section>
 
-            {/* Features Grid */}
-            <section id="features" className="py-40 px-6 relative">
+            {/* ── Features ── */}
+            <section className="py-32 px-6">
               <div className="max-w-7xl mx-auto">
-                <div className="text-center mb-32 space-y-6">
+                <div className="text-center mb-20 space-y-4">
                   <motion.h2
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-5xl md:text-8xl font-black tracking-tighter"
+                    className="text-4xl md:text-7xl font-black tracking-tighter"
                   >
-                    Master Your <span className="text-gradient-emerald">Strategy.</span>
+                    Everything you need.<br />
+                    <span className="text-gradient-emerald">Nothing you don&apos;t.</span>
                   </motion.h2>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: 0.2 }}
-                    className="text-zinc-500 text-xl max-w-2xl mx-auto font-medium"
+                    transition={{ delay: 0.15 }}
+                    className="text-zinc-500 text-lg max-w-xl mx-auto"
                   >
-                    Everything you need to play, improve, and compete.
+                    Built for players who just want to play.
                   </motion.p>
                 </div>
 
-                <div className="grid md:grid-cols-6 gap-6">
+                <div className="grid md:grid-cols-6 gap-4 md:gap-6">
                   <div className="md:col-span-4">
                     <FeatureCard
                       icon={Zap}
-                      title="Smart Matchmaking"
-                      description="Find opponents instantly across four time controls — bullet (1 min), blitz (5 min), rapid (10 min), and classical (30 min). Balanced games every time."
+                      title="Instant Matchmaking"
+                      description="Four time controls — bullet (1 min), blitz (5 min), rapid (10 min), classical (30 min). You'll never wait more than 30 seconds for a balanced game."
                     />
                   </div>
                   <div className="md:col-span-2">
                     <FeatureCard
                       icon={Users}
-                      title="Private Lobbies"
-                      description="Challenge a friend directly. Create a game, share the code, and play."
+                      title="Private Games"
+                      description="Challenge a friend directly. Create a room, share the code, play."
                       delay={0.1}
                     />
                   </div>
                   <div className="md:col-span-2">
                     <FeatureCard
                       icon={Search}
-                      title="Rating System"
-                      description="Elo-based ratings tracked across every game. See your progress and climb the ranks."
-                      delay={0.2}
+                      title="Real Elo Ratings"
+                      description="FIDE-standard Elo tracked across every game. Your rating means something here."
+                      delay={0.15}
                     />
                   </div>
                   <div className="md:col-span-4">
                     <FeatureCard
                       icon={Globe}
-                      title="Global Leaderboard"
-                      description="See where you rank against all players worldwide. Updated in real time after every game."
-                      delay={0.3}
+                      title="Live Leaderboard"
+                      description="See your rank against every player on the platform. Updated after every single game, in real time."
+                      delay={0.2}
                     />
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Final CTA */}
-            <section className="py-60 px-6 relative overflow-hidden">
+            {/* ── Time Controls ── */}
+            <section className="py-24 px-6">
+              <div className="max-w-4xl mx-auto">
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="text-3xl md:text-5xl font-black tracking-tighter text-center mb-12"
+                >
+                  Pick your pace.
+                </motion.h2>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: "Bullet", time: "1 min", icon: "⚡", desc: "Pure instinct" },
+                    { label: "Blitz", time: "5 min", icon: "🔥", desc: "Fast & sharp" },
+                    { label: "Rapid", time: "10 min", icon: "⏱", desc: "Think it through" },
+                    { label: "Classical", time: "30 min", icon: "♟", desc: "Deep strategy" },
+                  ].map((tc, i) => (
+                    <motion.div
+                      key={tc.label}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.08 }}
+                      whileHover={{ y: -6, scale: 1.03 }}
+                      className="glass-morphism rounded-2xl p-6 text-center hover:border-emerald-500/30 transition-all cursor-pointer group"
+                      onClick={() => router.push("/signup")}
+                    >
+                      <div className="text-3xl mb-3">{tc.icon}</div>
+                      <div className="text-lg font-black text-white">{tc.label}</div>
+                      <div className="text-emerald-400 font-mono text-sm font-bold">{tc.time}</div>
+                      <div className="text-xs text-zinc-500 mt-1">{tc.desc}</div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* ── CTA ── */}
+            <section className="py-40 px-6 relative overflow-hidden">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-emerald-500/5 blur-[200px] rounded-full pointer-events-none" />
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.92 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                className="max-w-5xl mx-auto glass-morphism rounded-[60px] p-20 text-center space-y-16 relative shadow-premium border-white/5"
+                transition={{ duration: 0.7 }}
+                className="max-w-4xl mx-auto glass-morphism rounded-[48px] p-16 md:p-24 text-center space-y-12 relative shadow-premium"
               >
-                <div className="space-y-8">
-                   <motion.h2
-                     initial={{ opacity: 0, y: 20 }}
-                     whileInView={{ opacity: 1, y: 0 }}
-                     viewport={{ once: true }}
-                     className="text-6xl md:text-9xl font-black tracking-tighter leading-none"
-                   >
-                     Ready to take<br />
-                     <span className="text-gradient-gold">the throne?</span>
-                   </motion.h2>
-                   <motion.p
-                     initial={{ opacity: 0, y: 20 }}
-                     whileInView={{ opacity: 1, y: 0 }}
-                     viewport={{ once: true }}
-                     transition={{ delay: 0.2 }}
-                     className="text-zinc-400 text-2xl font-medium tracking-tight max-w-2xl mx-auto"
-                   >
-                     No downloads. No ads. Just pure chess. Free to play.
-                   </motion.p>
+                <div className="space-y-6">
+                  <motion.h2
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="text-5xl md:text-8xl font-black tracking-tighter leading-none"
+                  >
+                    Ready to take<br />
+                    <span className="text-gradient-gold">the throne?</span>
+                  </motion.h2>
+                  <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.15 }}
+                    className="text-zinc-400 text-xl max-w-lg mx-auto"
+                  >
+                    No downloads. No ads. Just pure chess. Free forever.
+                  </motion.p>
                 </div>
 
-                <div className="flex flex-col items-center gap-10">
-                  <GlassButton primary className="text-2xl px-16 py-8 w-full sm:w-auto" onClick={() => router.push("/game")}>
-                    Start Playing Now
+                <div className="flex flex-col items-center gap-8">
+                  <GlassButton primary className="text-xl px-14 py-6 w-full sm:w-auto" onClick={() => router.push("/signup")}>
+                    Create Free Account
                   </GlassButton>
-
-                  <div className="flex flex-wrap items-center justify-center gap-10">
-                     {[
-                       { icon: Shield, label: "Fair Play" },
-                       { icon: Users, label: "Active Daily" },
-                       { icon: Zap, label: "Zero Lag" }
-                     ].map((badge, i) => (
-                       <div key={i} className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.3em] text-zinc-500">
-                         <badge.icon className="w-5 h-5 text-emerald-500" /> {badge.label}
-                       </div>
-                     ))}
+                  <div className="flex flex-wrap items-center justify-center gap-8">
+                    {[
+                      { icon: Shield, label: "Fair Play" },
+                      { icon: Users, label: "Active Community" },
+                      { icon: Zap,    label: "Zero Lag" },
+                    ].map((b, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.25em] text-zinc-500">
+                        <b.icon className="w-4 h-4 text-emerald-500" /> {b.label}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </motion.div>
             </section>
 
-            {/* Footer */}
-            <footer className="py-16 border-t border-white/5 bg-background relative overflow-hidden">
-              <div className="max-w-7xl mx-auto px-6 relative z-10">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 glass-morphism rounded-xl flex items-center justify-center font-black text-emerald-500 text-xl">♔</div>
-                    <span className="text-xl font-black tracking-tighter uppercase">Chess.io</span>
-                  </div>
-                  <div className="flex items-center gap-8 text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
-                    <button onClick={() => router.push("/game")} className="hover:text-emerald-500 transition-colors">Play</button>
-                    <button onClick={() => router.push("/leaderboard")} className="hover:text-emerald-500 transition-colors">Rankings</button>
-                    <button onClick={() => router.push("/login")} className="hover:text-emerald-500 transition-colors">Login</button>
-                    <button onClick={() => router.push("/signup")} className="hover:text-emerald-500 transition-colors">Sign Up</button>
-                  </div>
-                  <div className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em]">
-                    © 2026 Chess.io
-                  </div>
+            {/* ── Footer ── */}
+            <footer className="py-12 border-t border-white/5">
+              <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 glass-morphism rounded-xl flex items-center justify-center text-emerald-500 text-lg font-black">♔</div>
+                  <span className="text-lg font-black tracking-tighter uppercase">Chess.io</span>
                 </div>
+                <div className="flex items-center gap-8 text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+                  <button onClick={() => router.push("/leaderboard")} className="hover:text-emerald-400 transition-colors">Rankings</button>
+                  <button onClick={() => router.push("/login")}       className="hover:text-emerald-400 transition-colors">Login</button>
+                  <button onClick={() => router.push("/signup")}      className="hover:text-emerald-400 transition-colors">Sign Up</button>
+                </div>
+                <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em]">© 2026 Chess.io</div>
               </div>
             </footer>
+
           </motion.div>
         )}
       </AnimatePresence>

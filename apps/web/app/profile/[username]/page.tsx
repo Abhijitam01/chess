@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface ProfileStats {
@@ -34,7 +34,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const username = decodeURIComponent(params.username as string);
+  const isLoggedIn = typeof window !== "undefined" && !!localStorage.getItem("chess_token");
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,9 +68,12 @@ export default function ProfilePage() {
     return (
       <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4">
         <p className="text-red-400">{error ?? "User not found"}</p>
-        <Link href="/leaderboard" className="text-sm text-zinc-400 hover:text-zinc-100">
-          ← Leaderboard
-        </Link>
+        <button
+          onClick={() => router.push(isLoggedIn ? "/game" : "/leaderboard")}
+          className="text-sm text-zinc-400 hover:text-zinc-100"
+        >
+          ← {isLoggedIn ? "Back" : "Leaderboard"}
+        </button>
       </main>
     );
   }
@@ -93,9 +98,12 @@ export default function ProfilePage() {
     <main className="min-h-screen bg-zinc-950 text-zinc-100 px-4 py-10">
       <div className="max-w-2xl mx-auto flex flex-col gap-8">
         {/* Back */}
-        <Link href="/leaderboard" className="text-zinc-400 hover:text-zinc-100 transition-colors text-sm w-fit">
-          ← Leaderboard
-        </Link>
+        <button
+          onClick={() => router.push(isLoggedIn ? "/game" : "/leaderboard")}
+          className="text-zinc-400 hover:text-zinc-100 transition-colors text-sm w-fit"
+        >
+          ← {isLoggedIn ? "Back" : "Leaderboard"}
+        </button>
 
         {/* Profile header */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col items-center gap-4 py-8">

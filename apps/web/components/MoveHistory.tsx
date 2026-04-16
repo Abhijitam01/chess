@@ -9,14 +9,12 @@ interface MoveHistoryProps {
 export const MoveHistory = memo(function MoveHistory({ moves, selectedMoveIndex, onMoveSelect }: MoveHistoryProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to latest move
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [moves]);
 
-  // Group moves into pairs (white, black)
   const movePairs = [];
   for (let i = 0; i < moves.length; i += 2) {
     movePairs.push({
@@ -47,12 +45,12 @@ export const MoveHistory = memo(function MoveHistory({ moves, selectedMoveIndex,
                   hover:bg-white/[0.03] transition-colors duration-100
                 `}
               >
-                {/* Move number */}
+
                 <span className="text-zinc-500 text-xs font-mono tabular-nums text-right pr-1">
                   {pair.number}.
                 </span>
                 
-                {/* White's move */}
+
                 {(() => {
                   const moveIdx = index * 2;
                   const isSelected = selectedMoveIndex === moveIdx;
@@ -64,7 +62,7 @@ export const MoveHistory = memo(function MoveHistory({ moves, selectedMoveIndex,
                         font-mono text-[13px] px-2 py-1 rounded text-left
                         transition-all duration-100
                         ${isSelected || isLatest
-                          ? 'bg-indigo-500/20 text-indigo-400 font-semibold'
+                          ? 'bg-[#769656]/20 text-[#769656] font-semibold'
                           : 'text-zinc-200 hover:bg-white/[0.06]'
                         }
                       `}
@@ -74,7 +72,7 @@ export const MoveHistory = memo(function MoveHistory({ moves, selectedMoveIndex,
                   );
                 })()}
 
-                {/* Black's move */}
+
                 {pair.black ? (
                   (() => {
                     const moveIdx = index * 2 + 1;
@@ -87,7 +85,7 @@ export const MoveHistory = memo(function MoveHistory({ moves, selectedMoveIndex,
                           font-mono text-[13px] px-2 py-1 rounded text-left
                           transition-all duration-100
                           ${isSelected || isLatest
-                            ? 'bg-indigo-500/20 text-indigo-400 font-semibold'
+                            ? 'bg-[#769656]/20 text-[#769656] font-semibold'
                             : 'text-zinc-200 hover:bg-white/[0.06]'
                           }
                         `}

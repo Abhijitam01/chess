@@ -42,7 +42,7 @@ const RATE_LIMIT = 10;
 const OVERAGE_CLOSE_THRESHOLD = 5;
 
 class RemotePlayerProxy {
-  readonly readyState = 1 as const; // OPEN
+  readonly readyState = 1 as const;
 
   constructor(
     readonly userId: string,
@@ -353,7 +353,7 @@ export class GameManager {
     this.redisService.unsubscribeFromUserNotify(userId);
 
     const socket = this.userIdToSocket.get(userId);
-    if (!socket) return; // player disconnected before the match fired
+    if (!socket) return;
 
     this.remoteGameIds.set(userId, notification.gameId);
     this.forwardUserGameMessages(userId, socket);
