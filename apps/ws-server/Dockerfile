@@ -8,6 +8,6 @@ RUN npm install -g pnpm
 RUN pnpm install
 RUN pnpm run build
 
-WORKDIR /app/apps/ws-server
+RUN ls -la /app/apps/ws-server/dist/ || echo "ERROR: dist folder missing after build"
 
-CMD ["pnpm", "run", "start"]
+CMD ["node", "/app/apps/ws-server/dist/index.js"]
