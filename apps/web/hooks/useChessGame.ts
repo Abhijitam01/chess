@@ -144,19 +144,19 @@ export function useChessGame(
     socket.send(JSON.stringify({ type: DRAW_DECLINE }));
   }, [socket, isConnected]);
 
-  const makeMove = (from: string, to: string) => {
+  const makeMove = (from: string, to: string, promotion?: string) => {
     if (!isMyTurn) return false;
 
     const temp = createChess();
     temp.load(gameState.chess.fen());
 
-    const move = temp.move({ from, to, promotion: "q" });
+    const move = temp.move({ from, to, promotion: promotion ?? "q" });
     if (!move) return false;
 
     socket?.send(
       JSON.stringify({
         type: "move",
-        move: { from, to },
+        move: { from, to, promotion },
       } satisfies ClientMessage)
     );
 

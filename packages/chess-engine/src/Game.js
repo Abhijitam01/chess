@@ -13,7 +13,7 @@ export class Game {
     tryMove(move) {
         try {
             const result = this.board.move(move);
-            return result;
+            return result; // Returns the move object with san, from, to, etc.
         }
         catch {
             return null;
@@ -26,6 +26,8 @@ export class Game {
         if (!this.board.isGameOver()) {
             return null;
         }
+        // In chess.js, turn() returns the side to move; after game over, the side
+        // that *cannot* move is the loser.
         return this.board.turn() === "w" ? "black" : "white";
     }
     moveCount() {
@@ -33,6 +35,9 @@ export class Game {
     }
     isCheckmate() {
         return this.board.isCheckmate();
+    }
+    isStalemate() {
+        return this.board.isStalemate();
     }
     pgn() {
         return this.board.pgn();

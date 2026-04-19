@@ -244,12 +244,12 @@ export default function Game() {
     setViewingMoveIndex(null);
   };
 
-  const makeBotGameMove = (from: string, to: string): boolean => {
+  const makeBotGameMove = (from: string, to: string, promotion?: string): boolean => {
     if (botThinking || localStatus !== 'playing') return false;
     const temp = new Chess(localChess.fen());
     let result;
     try {
-      result = temp.move({ from, to, promotion: 'q' });
+      result = temp.move({ from, to, promotion: promotion ?? 'q' });
     } catch {
       return false;
     }
@@ -580,9 +580,9 @@ export default function Game() {
                     chess={displayChess}
                     playerColor={displayPlayerColor}
                     isMyTurn={displayIsMyTurn && viewingMoveIndex === null}
-                    onMove={(from, to) => {
-                      if (botMode) return makeBotGameMove(from, to);
-                      const ok = makeMove(from, to);
+                    onMove={(from, to, promotion) => {
+                      if (botMode) return makeBotGameMove(from, to, promotion);
+                      const ok = makeMove(from, to, promotion);
                       if (ok) setViewingMoveIndex(null);
                       return ok;
                     }}

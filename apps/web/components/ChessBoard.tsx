@@ -14,11 +14,20 @@ interface ChessBoardProps {
     chess: Chess;
     playerColor: 'white' | 'black' | null;
     isMyTurn: boolean;
-    onMove: (from: string, to: string) => boolean;
+    onMove: (from: string, to: string, promotion?: string) => boolean;
     boardTheme?: BoardTheme;
     showCoordinates?: boolean;
     readOnly?: boolean;
     viewingMoveIndex?: number | null;
+}
+
+const PROMOTION_PIECES = ['q', 'r', 'b', 'n'] as const;
+type PromotionPiece = typeof PROMOTION_PIECES[number];
+
+function isPromotionMove(chess: Chess, from: string, to: string): boolean {
+    const piece = chess.get(from as Square);
+    if (!piece || piece.type !== 'p') return false;
+    return (piece.color === 'w' && to[1] === '8') || (piece.color === 'b' && to[1] === '1');
 }
 
 export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTurn, onMove, boardTheme = 'classic', showCoordinates = true, readOnly = false, viewingMoveIndex = null }: ChessBoardProps) {
@@ -26,6 +35,7 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
     const [validMoves, setValidMoves] = useState<string[]>([]);
     const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
     const [draggedFrom, setDraggedFrom] = useState<string | null>(null);
+    const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null);
 
     // When viewing a past move, reconstruct that board position
     const displayChess = useMemo(() => {
@@ -55,47 +65,57 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
         }
     }, [displayChess]);
 
+    const commitMove = (from: string, to: string, promotion?: string) => {
+        const success = onMove(from, to, promotion);
+        if (success) {
+            setLastMove({ from, to });
+        }
+        setSelectedSquare(null);
+        setValidMoves([]);
+        return success;
+    };
+
+    const handlePromotionSelect = (piece: PromotionPiece) => {
+        if (!pendingPromotion) return;
+        commitMove(pendingPromotion.from, pendingPromotion.to, piece);
+        setPendingPromotion(null);
+    };
+
     const handleSquareClick = (square: string) => {
-        if (readOnly || !isMyTurn) return;
+        if (readOnly || !isMyTurn || pendingPromotion) return;
 
         const piece = chess.get(square as Square);
         const yourColor = playerColor === 'white' ? 'w' : 'b';
 
-        // Case 1: No piece selected - select if it's your piece
         if (!selectedSquare && piece && piece.color === yourColor) {
             setSelectedSquare(square);
             const moves = chess.moves({ square: square as Square, verbose: true });
             setValidMoves(moves.map(m => m.to));
             return;
         }
-        
-        // Case 2: Click same square - deselect
+
         if (selectedSquare === square) {
             setSelectedSquare(null);
             setValidMoves([]);
             return;
         }
 
-        // Case 3: Click another piece of yours - reselect
         if (piece && piece.color === yourColor) {
             setSelectedSquare(square);
             const moves = chess.moves({ square: square as Square, verbose: true });
             setValidMoves(moves.map(m => m.to));
             return;
         }
-        
-        // Case 4: Click valid move - make the move
+
         if (validMoves.includes(square)) {
-            const success = onMove(selectedSquare as string, square);
-            if (success) {
-                setLastMove({ from: selectedSquare as string, to: square });
-                setSelectedSquare(null);
-                setValidMoves([]);
+            if (isPromotionMove(chess, selectedSquare as string, square)) {
+                setPendingPromotion({ from: selectedSquare as string, to: square });
+                return;
             }
+            commitMove(selectedSquare as string, square);
             return;
         }
 
-        // Case 5: Click invalid square - cancel selection
         setSelectedSquare(null);
         setValidMoves([]);
     };
@@ -110,6 +130,12 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
         const moves = chess.moves({ square: square as Square, verbose: true });
         setValidMoves(moves.map(m => m.to));
         e.dataTransfer.effectAllowed = 'move';
+
+        // Show only the piece image as the drag ghost, not the whole square
+        const img = e.currentTarget.querySelector('img');
+        if (img) {
+            e.dataTransfer.setDragImage(img, img.offsetWidth / 2, img.offsetHeight / 2);
+        }
     };
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -121,14 +147,17 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
         e.preventDefault();
         if (!draggedFrom) return;
         if (validMoves.includes(square)) {
-            const success = onMove(draggedFrom, square);
-            if (success) {
-                setLastMove({ from: draggedFrom, to: square });
+            if (isPromotionMove(chess, draggedFrom, square)) {
+                setPendingPromotion({ from: draggedFrom, to: square });
+                setDraggedFrom(null);
+                return;
             }
+            commitMove(draggedFrom, square);
+        } else {
+            setSelectedSquare(null);
+            setValidMoves([]);
         }
         setDraggedFrom(null);
-        setSelectedSquare(null);
-        setValidMoves([]);
     };
 
     const isLightSquare = (fileIndex: number, rankIndex: number): boolean => {
@@ -145,12 +174,14 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
         moveDark: 'rgba(247, 236, 94, 0.6)'
     };
 
+    const promotionColor = playerColor === 'black' ? 'b' : 'w';
+
     return (
         <div className="flex justify-center items-center w-full h-full">
             {/* Board container with explicit centering and sizing */}
             <div className="
                 w-full h-full
-                aspect-square 
+                aspect-square
                 bg-[#2c2c2c]
                 border-4 border-[#3c3c3c]
                 rounded-sm
@@ -170,10 +201,9 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
                             const yourColor = playerColor === 'white' ? 'w' : 'b';
                             const isDraggable = !readOnly && isMyTurn && !!piece && piece.color === yourColor;
 
-                            // Inline styles for absolute color safety
-                            const bgStyle = isSelected 
+                            const bgStyle = isSelected
                                 ? colors.selected
-                                : isLastMoveSquare 
+                                : isLastMoveSquare
                                     ? (isLight ? colors.moveLight : colors.moveDark)
                                     : (isLight ? colors.light : colors.dark);
 
@@ -219,7 +249,7 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
                                     {/* Chess piece */}
                                     {piece && (
                                         <div className="relative z-20 w-[90%] h-[90%] flex items-center justify-center">
-                                            <ChessPiece 
+                                            <ChessPiece
                                                 type={piece.type as 'k' | 'q' | 'r' | 'b' | 'n' | 'p'}
                                                 color={piece.color}
                                                 isSelected={selectedSquare === square}
@@ -231,6 +261,29 @@ export const ChessBoard = memo(function ChessBoard({ chess, playerColor, isMyTur
                         })
                     ))}
                 </div>
+
+                {/* Promotion modal */}
+                {pendingPromotion && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
+                        <div className="bg-[#2c2c2c] border-2 border-[#555] rounded-lg p-4 flex flex-col items-center gap-3 shadow-2xl">
+                            <span className="text-white text-sm font-semibold tracking-wide">Choose promotion piece</span>
+                            <div className="flex gap-2">
+                                {PROMOTION_PIECES.map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => handlePromotionSelect(p)}
+                                        className="w-16 h-16 bg-[#3c3c3c] hover:bg-[#4c4c4c] border border-[#666] hover:border-[#aaa] rounded-md flex items-center justify-center transition-colors cursor-pointer"
+                                    >
+                                        <ChessPiece
+                                            type={p}
+                                            color={promotionColor}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

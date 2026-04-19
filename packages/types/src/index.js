@@ -1,2 +1,2 @@
-export * from './messages';
-export * from './events';
+export * from './messages.js';
+export * from './events.js';
