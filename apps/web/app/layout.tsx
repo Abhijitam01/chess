@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Chess.io',
+  title: 'Chessable',
   description: 'Pure chess. Zero clutter. Built for those who take the game seriously.',
 };
 

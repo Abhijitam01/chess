@@ -130,7 +130,7 @@ function ProductFrame({ dark }: { dark: boolean }) {
           <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
           <div className="w-3 h-3 rounded-full bg-[#28c840]" />
         </div>
-        <div className={`flex-1 text-center text-xs font-mono ${dark ? "text-white/20" : "text-black/20"}`}>chess.io/game</div>
+        <div className={`flex-1 text-center text-xs font-mono ${dark ? "text-white/20" : "text-black/20"}`}>chessable/game</div>
       </div>
 
       {/* Game UI */}
@@ -251,7 +251,7 @@ export default function HomePage() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBorder}`}>
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <button onClick={() => router.push("/")} className="flex items-center gap-2.5 font-black text-lg tracking-tight lp-text">
-            <span className="text-xl lp-accent-c">♔</span> Chess.io
+            <span className="text-xl lp-accent-c">♔</span> Chessable
           </button>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium lp-muted">
@@ -496,7 +496,7 @@ export default function HomePage() {
             {/* Brand */}
             <div className="flex-1 max-w-xs">
               <div className="flex items-center gap-2 font-black text-lg tracking-tight">
-                <span style={{ color: "var(--lp-accent)" }}>♔</span> Chess.io
+                <span style={{ color: "var(--lp-accent)" }}>♔</span> Chessable
               </div>
               <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--lp-muted)" }}>
                 The chessboard built for serious play. Real Elo ratings, instant matchmaking, zero fluff.
@@ -561,7 +561,7 @@ export default function HomePage() {
                 letterSpacing: "-0.04em",
               }}
             >
-              CHESS.IO
+              CHESSABLE
             </span>
           </div>
 
@@ -570,7 +570,7 @@ export default function HomePage() {
 
           {/* Bottom bar */}
           <div className="py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs" style={{ color: "var(--lp-muted)" }}>
-            <span>© 2026 Chess.io. All rights reserved.</span>
+            <span>© 2026 Chessable. All rights reserved.</span>
             <span>
               Built by{" "}
               <a href="https://abhijitamdubey.site" target="_blank" rel="noopener noreferrer"
